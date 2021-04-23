@@ -48,3 +48,5 @@ writeRaster(stack_cut, "Clouds", format = "CDF",overwrite=TRUE, varname="CLOUD",
 #How to read date from NETcdf
 any_stack<-stack("C:/Users/Rodrigo/Documents/R/hola344.nc")
 any_stack<-setZ(any_stack, as.Date(as.numeric(substring(names(any_stack), 2)), origin = "1970-01-01"))
+
+print("Hello world")
