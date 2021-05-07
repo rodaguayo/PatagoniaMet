@@ -5,6 +5,8 @@ library("hydroGOF")
 library("raster")
 library("readxl")
 
+#Precipitation validation
+
 #Observations
 pp_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Precipitation_v10.shp")
 pp_obs<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_monthly", guess_max = 30000)
