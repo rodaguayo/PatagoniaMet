@@ -24,7 +24,7 @@ for (i in 1:91) {t2m_sim2[,i]<-t2m_sim2[,i]-mean(t2m_sim2[,i])}
 rSD_t2m2<-1/rSD(sim=t2m_sim2, obs=t2m_obs[481:840,], na.rm=TRUE)
 
 rSD_t2m<-rSD(sim=t2m_sim, obs=t2m_obs[481:840,], na.rm=TRUE)
-write.csv(cbind(ME_t2m, rSD_t2m2),"ME_rSD_t2m.csv")
+write.csv(cbind(ME_t2m, rSD_t2m2),"C:/Users/rooda/Dropbox/Rstudio/ME_rSD_t2m.csv")
 
 #Second stage: Mean and variance scaling 
 t2m_era5_v1<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1990_2019_v1.nc", varname = "tas")
