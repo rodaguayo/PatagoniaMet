@@ -26,7 +26,7 @@ fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig1 <- fig1 %>% layout(annotations = title)
 
 title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.99)
-y2 <- list(title = "Bias (B)", titlefont = f, range = c(0, 4),
+y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 4),
           tickfont = f2, dtick = 1, ticks = "outside", zeroline = FALSE)
 
 fig2 <- plot_ly(data_pp, y = ~Beta, x = ~Model, type = "box", 
@@ -36,7 +36,7 @@ fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig2 <- fig2 %>% layout(annotations = title2)
 
 title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.95)
-y3 <- list(title = "Variability (y)", titlefont = f, range = c(0.3, 1.2),
+y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0.3, 1.2),
            tickfont = f2, dtick = 0.3, ticks = "outside", zeroline = FALSE)
 
 fig3 <- plot_ly(data_pp, y = ~Gamma, x = ~Model, type = "box", 
@@ -56,7 +56,7 @@ fig4 <- fig4 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig4 <- fig4 %>% layout(annotations = title4)
 
 title5 <-list(text = "e)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.91)
-y5 <- list(title = "Bias (degC)", titlefont = f, 
+y5 <- list(title = "Mean error (β')", titlefont = f, 
            tickfont = f2, dtick = 2, ticks = "outside", zeroline = FALSE, range = c(-8, 2))
 
 fig5 <- plot_ly(data_t2m, y = ~Beta2, x = ~Model, type = "box", 
@@ -66,7 +66,7 @@ fig5 <- fig5 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig5 <- fig5 %>% layout(annotations = title5)
 
 title6 <-list(text = "f)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.91)
-y6 <- list(title = "Variability (y)", titlefont = f, 
+y6 <- list(title = "Variability (γ')", titlefont = f, 
            tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0.6, 1.2))
 
 fig6 <- plot_ly(data_t2m, y = ~Gamma2, x = ~Model, type = "box", 
@@ -80,5 +80,8 @@ fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6,
                margin = c(0.04, 0.04, 0.01, 0.01))
 fig
 
-orca(fig, file = "Figure5_Validation.pdf", width = 1200, height = 1000)
-orca(fig, file = "Figure5_Validation.png", width = 1200, height = 1000)
+server <- orca_serve()
+server$export(fig, file = "Figure5_Validation.pdf", width = 1200, height = 1000)
+server$export(fig, file = "Figure5_Validation.png", width = 1200, height = 1000)
+server$close()
+
