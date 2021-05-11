@@ -1,15 +1,14 @@
 rm(list=ls())
 cat("\014")  
 
-library("zoo")
-library("sf")
+library("qmap")
 library("readxl")
 library("raster")
-library("qmap")
 library("hydroGOF")
-library("spatialEco")
 
-#Quantile mapping
+#PP Bias correction: Quantile mapping
+
+#First stage: Best parametric function
 pp_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Precipitation_v10.shp")
 pp_obs<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_monthly", guess_max = 30000)
 pp_obs<-pp_obs[481:840,]
@@ -18,7 +17,6 @@ pp_obs$Date <- NULL
 pp_era5<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1990_2019.nc", varname = "tp")
 pp_sim_era5<-as.data.frame(t(extract(pp_era5, pp_shape, method='simple')))
 
-#Validation and parameters
 KGE<-matrix(0,147,28)
 QM_parameters<-matrix(0,147,4)
 rownames(KGE)<-names(pp_obs)
@@ -65,30 +63,21 @@ KGE[i,13:16]<-cbind(t(KGE_expasympt$KGE.elements),KGE_expasympt$KGE.value)
 KGE[i,17:20]<-cbind(t(KGE_scale$KGE.elements),KGE_scale$KGE.value)
 KGE[i,21:24]<-cbind(t(KGE_powerx0$KGE.elements),KGE_powerx0$KGE.value)
 KGE[i,25:28]<-cbind(t(KGE_expasymmptx0$KGE.elements),KGE_expasymmptx0$KGE.value)
-
-#print(i)
 }
 
 write.csv(KGE,"KGE_pp.csv")
 write.csv(QM_parameters,"QM_parameters.csv")
 
 
-#Rasterstack correction
-sample <- raster(matrix(rnorm(220*340),340,220))
-extent(sample) <- c(-76,-65,-57,-40)
-projection(sample) <- CRS("+init=epsg:4326")
+#Second stage: Quantile mapping on stack
+pp_era5 <- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1990_2019.nc", varname = "tp")
+dem <- raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/dem_patagonia005.tif")
 
-pp_era5<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1950_2019.nc", varname = "tp")
-pp_era5<- resample(pp_era5, sample, method="bilinear")
-pp_era5<-setZ(pp_era5,seq(as.Date("1950/1/1"), as.Date("2019/12/1"), "month"))
-pp_era5<- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
-
-dem<- raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/dem_patagonia005.tif")
 dem[dem <= 1] <- NA
-pp_era5=mask(pp_era5, dem)
+pp_era5 <- mask(pp_era5, dem)
 
-a_linear<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/MS1 Results/PP_a_linear.tif"), sample)
-b_linear<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/MS1 Results/PP_b_linear.tif"), sample)
+a_linear<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/MS1 Results/PP_a_linear.tif"), pp_era5)
+b_linear<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/MS1 Results/PP_b_linear.tif"), pp_era5)
 b_linear[b_linear == 0] <- NA
 
 gf <- focalWeight(pp_era5, 0.04, "Gauss")
@@ -97,38 +86,31 @@ b_linear <- mask(focal(b_linear, w=gf, pad = TRUE), dem)
 
 pp_era5_v2=a_linear+pp_era5*b_linear
 pp_era5_v2[pp_era5_v2 < 0] <- 0
+
 pp_era5_v2<-setZ(pp_era5_v2,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
 pp_era5_v2_mean<-mean(stackApply(pp_era5_v2, indices<-format(pp_era5_v2@z$time,"%y"), fun=sum))
-plot(pp_era5_v2_mean)
 
-writeRaster(pp_era5_v2, "PP_PMET_1990_2019_v1.nc", format = "CDF", overwrite=TRUE, varname="PP", varunit="mm", longname="Precipitation", xname="X", yname="Y", zname="time", zunit="month")
+writeRaster(pp_era5_v2, "PP_PMET_1990_2019_v1.nc", format = "CDF", overwrite=TRUE, varname="PP", 
+            varunit="mm", longname="Precipitation", xname="X", yname="Y", zname="time", zunit="month")
 writeRaster(pp_era5_v2_mean, "PP_PMET_1990-2019_v1.tif", format = "GTiff", overwrite = TRUE)
 
-#Rasterstack correction Budyko
-pp_patagoniamet<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_PMET_1990_2019_v1.nc", varname = "PP")
-bias_factor<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/bias_factor005.tif"),pp_patagoniamet)
+
+#Third stage: Budyko correction
+pp_pmet<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_PMET_1990_2019_v1.nc", varname = "PP")
+bias_factor<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/bias_factor005.tif"), pp_pmet)
 bias_factor[bias_factor == 0] <- NA
 
 bias_factor <- focal(bias_factor, w=focalWeight(bias_factor, 0.04, "Gauss"))
 bias_factor[bias_factor <= 1] <- 1
 bias_factor<-mask(bias_factor,pp_patagoniamet[[1]])
 
-writeRaster(bias_factor, "bias_factor005_v2.tif", format = "GTiff", overwrite = TRUE)
+pp_pmet_v2<-pp_pmet*bias_factor
+pp_pmet_v2<-setZ(pp_pmet_v2,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
 
-pp_patagoniamet_v2<-pp_patagoniamet*bias_factor
+pp_pmet_v2_mean<-mean(stackApply(pp_pmet_v2, indices<-format(pp_pmet_v2@z$time,"%y"), fun=sum))
+pp_pmet_v2_mean[pp_pmet_v2_mean == 0] <- NA
 
-pp_patagoniamet_v2<-setZ(pp_patagoniamet_v2,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
-pp_patagoniamet_v2_mean<-mean(stackApply(pp_patagoniamet_v2, indices<-format(pp_patagoniamet_v2@z$time,"%y"), fun=sum))
-pp_patagoniamet_v2_mean[pp_patagoniamet_v2_mean == 0] <- NA
+writeRaster(pp_pmet_v2, "PP_PMET_1990_2019_v2.nc", format = "CDF", overwrite=TRUE, varname="PP", 
+            varunit="mm", longname="precipitation", xname="X", yname="Y", zname="time", zunit="month")
+writeRaster(pp_pmet_v2_mean, "PP_PMET_1990-2019_mean_v2.tif", format = "GTiff", overwrite = TRUE)
 
-writeRaster(pp_patagoniamet_v2, "PP_PMET_1990_2019_v2.nc", format = "CDF", overwrite=TRUE, varname="PP", varunit="mm", longname="precipitation", xname="X", yname="Y", zname="time", zunit="month")
-writeRaster(pp_patagoniamet_v2_mean, "PP_PMET_1990-2019_mean_v2.tif", format = "GTiff", overwrite = TRUE)
-  
-#Validation
-pp_obs<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-pp_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Precipitation_v10.shp")
-pp_obs$Date <- NULL
-
-pp_sim_era5<-as.data.frame(t(extract(pp_era5_v2,pp_shape, method='simple')))
-KGE_pp_era5_v2<-KGE(sim=pp_sim_era5, obs=pp_obs[481:840,], method="2012", out.type="full",na.rm=TRUE)
-write.csv(cbind(t(KGE_pp_era5_v2$KGE.elements),KGE_pp_era5_v2$KGE.value),"KGE_PP_ERA5_v2.csv")

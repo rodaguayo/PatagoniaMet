@@ -7,7 +7,6 @@ library("hydroGOF")
 
 #T2M Bias correction: Variance and mean scaling
 
-
 #First stage: Mean and variance values for RF 
 t2m_era5_v1<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1990_2019_v1.nc", varname = "tas")
 t2m_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Temperature_v10.shp")
