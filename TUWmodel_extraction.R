@@ -2,8 +2,6 @@ rm(list=ls())
 cat("\014")  
 
 library("TUWmodel")
-library("hydroTSM")
-library("hydroGOF")
 library("readxl")
 library("raster")
 
@@ -68,7 +66,6 @@ for (i in 1:length(basins_int)) {
       write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
       pp_i<-round(t(raster::extract(pp_era5d, elev_zones_i, fun = mean)),0)
       write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      
       
       print(i)
       
