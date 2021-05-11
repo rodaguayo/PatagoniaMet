@@ -9,27 +9,7 @@ library("hydroGOF")
 library("SPEI")
 library("doParallel")
 
-#Downscaling to 0.05º using lapse rate of 6.5C km-1
-sample <- matrix(rnorm(220*340),340,220)
-sample <- raster(sample)
-extent(sample) <- c(-76,-65,-57,-40)
-projection(sample) <- CRS("+init=epsg:4326")
-
-t2m_era5_v0<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1950_2019.nc", varname = "tas")
-t2m_era5_v0<-t2m_era5_v0[[which(getZ(t2m_era5_v0) >= as.Date("1989-12-31"))]]
-
-dem<-raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/dem_patagonia3f.tif")
-dem[is.na(dem)] <- 0
-dem_005<-resample(dem, sample, method="bilinear")
-dem_025<-resample(dem, t2m_era5_v0, method="bilinear")
-dem_025<-resample(dem_025, dem_005, method="ngb")
-
-t2m_era5_v1<-resample(t2m_era5_v0, dem_005, method="ngb")
-t2m_era5_v1<-t2m_era5_v1+(dem_025-dem_005)*0.0065
-t2m_era5_v1<-round(t2m_era5_v1, 2)
-t2m_era5_v1<-setZ(t2m_era5_v1, getZ(t2m_era5_v0))
-
-#Bias correction: Variance and mean scaling: First stage
+#T2M Bias correction: Variance and mean scaling: First stage
 t2m_era5_v1<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1990_2019_v1.nc", varname = "tas")
 
 delta_value<-raster("C:/Users/rooda/Dropbox/Rstudio/mean_value.tif")
@@ -98,16 +78,3 @@ PET_era5_v3_mean<-mean(stackApply(PET_era5_v3, indices<-format(PET_era5_v2@z$tim
 
 writeRaster(PET_era5_v3, "PET_ERA5_1990_2019_v2.nc", format = "CDF", overwrite=TRUE, varname="pet", varunit="mm", longname="temperature", xname="X", yname="Y", zname="time", zunit="month")
 writeRaster(PET_era5_v3_mean, "PET_ERA5_1990_2019_v2_mean.tif", format = "GTiff", overwrite=TRUE)
-
-
-#Best value for lapse rate
-ME_t2m_era5_v1 <- function(lr) {
-  
-  t2m_era5_v1<-resample(t2m_era5_v0, dem_01, method="ngb")
-  t2m_era5_v1<-t2m_era5_v1+(dem_025-dem_01)*lr
-  
-  t2m_sim_era5_v1<-as.data.frame(t(extract(t2m_era5_v1,t2m_shape, method='simple')))
-  ME_t2m_era5_v1<-sum((me(sim=t2m_sim_era5_v1, obs=t2m_obs, na.rm=TRUE))^2)
-  
-}
-best_lr<-optim(0.0065, ME_t2m_era5_v1)

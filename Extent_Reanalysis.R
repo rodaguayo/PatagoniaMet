@@ -57,7 +57,7 @@ stack_t2m_crop<-crop(stack_t2m, cut)-273.15
 stack_t2m_crop <- setZ(stack_t2m_crop, seq(as.Date('1980-01-01'), as.Date('2019-12-31'), by = 'month'))
 writeRaster(stack_t2m_crop, "t2m_MERRA2", format = "CDF", overwrite=TRUE, varname="Temperature", varunit="mm", xname="Longitude",   yname="Latitude", zname="Time (Month)")
 
-#Patagonia: CFS
+#Patagonia: CSFR
 cut<-extent(-79,-64,-57,-40)
 
 stack_pp1<-stack(list.files("C:/Users/rooda/Downloads/CSFR/pp/1979-2010/", full.names = TRUE), varname="A_PCP_L1_AccumAvg")
@@ -81,7 +81,7 @@ stack_t2m_crop<-round(stack_t2m_crop, 2)
 stack_t2m_crop <- setZ(stack_t2m_crop, seq(as.Date('1979-01-01'), as.Date('2019-12-31'), by = 'month'))
 writeRaster(stack_t2m_crop, "t2m_CSFR", format = "CDF", overwrite=TRUE, varname="Temperature", varunit="degC", xname="Longitude",   yname="Latitude", zname="Time(Month)")
 
-#Patagonia: MSWEP
+#Patagonia: MSWEP v2.8
 stack_pp<-stack(list.files("C:/Users/rooda/Downloads/MSWEP/", full.names = TRUE), varname="precipitation")
 stack_pp<-crop(stack_pp, cut)
 stack_pp<- setZ(stack_pp, seq(as.Date('1979-02-01'), as.Date('2020-11-01'), by = 'month'))
@@ -102,7 +102,7 @@ stack_pp<-crop(stack_pp, cut)
 stack_pp<- setZ(stack_pp, seq(as.Date('1979-01-01'), as.Date('2019-12-01'), by = 'month'))
 writeRaster(stack_pp, "T2M_CR2MET_1979_2019.nc", format = "CDF", overwrite=TRUE, varname="Temperature", varunit="degC", xname="Longitude",   yname="Latitude", zname="Time (Month)")
 
-#Patagonia: CR2MET-RegCM4
+#Patagonia: CR2-RegCM4
 cut<-extent(-76,-66,-57,-40)
 
 stack_pp<-stack(list.files("C:/Users/rooda/Desktop/pr/", full.names = TRUE), varname="pr")

@@ -9,31 +9,14 @@ library("qmap")
 library("hydroGOF")
 library("spatialEco")
 
-#Sample
-sample <- matrix(rnorm(220*340),340,220)
-sample <- raster(sample)
-extent(sample) <- c(-76,-65,-57,-40)
-projection(sample) <- CRS("+init=epsg:4326")
-
 #Quantile mapping
 pp_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Precipitation_v10.shp")
 pp_obs<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_monthly", guess_max = 30000)
 pp_obs<-pp_obs[481:840,]
 pp_obs$Date <- NULL
 
-pp_era5<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1950_2019.nc", varname = "tp")
-pp_era5<- resample(pp_era5, sample, method="bilinear")
-pp_era5<-setZ(pp_era5,seq(as.Date("1950/1/1"), as.Date("2019/12/1"), "month"))
-pp_era5<- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
-pp_era5<-setZ(pp_era5,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
-
-writeRaster(pp_era5, "PP_ERA5_1990_2019.nc", format = "CDF", datatype='INT2S', overwrite=TRUE, varname="tp", varunit="mm", 
-            longname="precipitation", xname="X", yname="Y", zname="time", zunit="month")
-
+pp_era5<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1990_2019.nc", varname = "tp")
 pp_sim_era5<-as.data.frame(t(extract(pp_era5, pp_shape, method='simple')))
-
-pp_era5_mean<-mean(stackApply(pp_era5, indices<-format(pp_era5@z$time,"%y"), fun=sum))
-writeRaster(pp_era5_mean, "PP_ERA5_005_1990-2019.tif", format = "GTiff")
 
 #Validation and parameters
 KGE<-matrix(0,147,28)
