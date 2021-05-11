@@ -14,6 +14,7 @@ pp_obs$Date<-as.Date(pp_obs$Date)
 
 #Climate models (reanalysis, satellites, etc)
 pp_era5<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1950_2019.nc", varname = "tp")
+pp_era5_v2<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1990_2019.nc", varname = "tp")
 
 pp_merra2<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_MERRA2_1980_2019.nc", varname = "Precipitation")
 pp_merra2<-setNames(pp_merra2,seq(as.Date("1980/1/1"), as.Date("2019/12/1"), "month"))
@@ -38,6 +39,7 @@ pp_pmet<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_PMET_1990
 
 #Extract
 pp_era5<-t(extract(pp_era5,pp_shape, method='simple'))
+pp_era5_v2<-t(extract(pp_era5_v2,pp_shape, method='simple'))
 pp_merra2<-t(extract(pp_merra2,pp_shape, method='simple'))
 pp_csfr<-t(extract(pp_csfr,pp_shape, method='simple'))
 pp_cr2reg<-t(extract(pp_cr2reg,pp_shape, method='simple'))
@@ -45,6 +47,7 @@ pp_cr2met<-t(extract(pp_cr2met,pp_shape, method='simple'))
 pp_mswep<-t(extract(pp_mswep,pp_shape, method='simple'))
 pp_pmet<-t(extract(pp_pmet, pp_shape, method='simple'))
 colnames(pp_era5) <- pp_shape$ID
+colnames(pp_era5_v2) <- pp_shape$ID
 colnames(pp_merra2) <- pp_shape$ID
 colnames(pp_csfr) <- pp_shape$ID
 colnames(pp_cr2reg) <- pp_shape$ID
@@ -55,6 +58,9 @@ colnames(pp_pmet) <- pp_shape$ID
 #Subset and performance (CR2MET, MSWEP and PMET: 1990-2019)
 pp_obs_subset<-subset(pp_obs, Date >= min(as.Date(rownames(pp_era5), format =  "X%Y.%m.%d")))[,-1]
 KGE_era5<-KGE(sim=pp_era5, obs=pp_obs_subset, method="2012", out.type="full",na.rm=TRUE)
+
+pp_obs_subset<-subset(pp_obs, Date >= min(as.Date(rownames(pp_era5_v2), format =  "X%Y.%m.%d")))[,-1]
+KGE_era5_v2<-KGE(sim=pp_era5_v2, obs=pp_obs_subset, method="2012", out.type="full",na.rm=TRUE)
 
 pp_obs_subset<-subset(pp_obs, Date >= min(as.Date(rownames(pp_merra2), format =  "X%Y.%m.%d")))[,-1]
 KGE_merra2<-KGE(sim=pp_merra2, obs= pp_obs_subset, method="2012", out.type="full",na.rm=TRUE)
@@ -78,6 +84,9 @@ KGE_pmet<-KGE(sim=pp_pmet, obs=pp_obs_subset, method="2012", out.type="full",na.
 KGE_era5 <- cbind(t(KGE_era5$KGE.elements),KGE_era5$KGE.value)
 colnames(KGE_era5)<-paste0(colnames(KGE_era5), "_ERA5")
 
+KGE_era5_v2 <- cbind(t(KGE_era5_v2$KGE.elements),KGE_era5_v2$KGE.value)
+colnames(KGE_era5_v2)<-paste0(colnames(KGE_era5_v2), "_ERA5d")
+
 KGE_merra2 <- cbind(t(KGE_merra2$KGE.elements),KGE_merra2$KGE.value)
 colnames(KGE_merra2)<-paste0(colnames(KGE_merra2), "_MERRA2")
 
@@ -97,5 +106,5 @@ KGE_pmet <- cbind(t(KGE_pmet$KGE.elements),KGE_pmet$KGE.value)
 colnames(KGE_pmet)<-paste0(colnames(KGE_pmet), "_PMET")
 
 #Merge and save
-KGE<-cbind(KGE_era5, KGE_merra2, KGE_csfr, KGE_cr2reg, KGE_cr2met, KGE_mswep, KGE_pmet)
+KGE<-cbind(KGE_era5, KGE_era5_v2, KGE_merra2, KGE_csfr, KGE_cr2reg, KGE_cr2met, KGE_mswep, KGE_pmet)
 write.csv(KGE,"C:/Users/rooda/Dropbox/Rstudio/Validation_PP.csv")

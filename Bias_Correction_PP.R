@@ -26,6 +26,10 @@ pp_era5<- resample(pp_era5, sample, method="bilinear")
 pp_era5<-setZ(pp_era5,seq(as.Date("1950/1/1"), as.Date("2019/12/1"), "month"))
 pp_era5<- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
 pp_era5<-setZ(pp_era5,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
+
+writeRaster(pp_era5, "PP_ERA5_1990_2019.nc", format = "CDF", datatype='INT2S', overwrite=TRUE, varname="tp", varunit="mm", 
+            longname="precipitation", xname="X", yname="Y", zname="time", zunit="month")
+
 pp_sim_era5<-as.data.frame(t(extract(pp_era5, pp_shape, method='simple')))
 
 pp_era5_mean<-mean(stackApply(pp_era5, indices<-format(pp_era5@z$time,"%y"), fun=sum))
