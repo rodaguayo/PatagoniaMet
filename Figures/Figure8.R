@@ -7,8 +7,8 @@ library("RColorBrewer")
 
 Sys.setenv(PATH=paste0("C:/Users/rooda/AppData/Local/Programs/orca;", Sys.getenv("PATH")))
 
-data_q<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Figures/Figure7_Validation_v2.xlsx", sheet = "data_pp")
-data_q$Model <- factor(data_pp$Model, levels = c("ERA5d", "MSWEP", "CR2MET","PMET"))
+data_q<-read.csv("C:/Users/rooda/Dropbox/Patagonia/MS1 Results/Q_performance.csv")
+data_q$Model <- factor(data_q$Model, levels = c("ERA5d", "MSWEP", "CR2MET","PMET"))
 
 f <- list(family = "Times New Roman", size = 22)
 f2 <- list(family = "Times New Roman", size = 18)
@@ -16,7 +16,7 @@ f2 <- list(family = "Times New Roman", size = 18)
 x <- list(titlefont = f, tickfont = f2, ticks = "outside")
 title <-list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.99)
 y <- list(title = "Correlation (r)", titlefont = f, 
-          tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0.2, 1))
+          tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0, 1))
 
 fig1 <- plot_ly(data_q, y = ~r, x = ~Model, type = "box", 
                 color = ~Model, colors = brewer.pal(4, 'Dark2'))
@@ -58,6 +58,6 @@ fig <- subplot(fig1, fig2, fig3, fig4, nrows = 2, shareX = T, titleY = T, margin
 fig
 
 server <- orca_serve()
-server$export(fig, file = "Figure8_TUWmodel.pdf", width = 1200, height = 1000, scale = 4)
-server$export(fig, file = "Figure8_TUWmodel.png", width = 1200, height = 1000, scale = 4)
+server$export(fig, file = "Figure8_TUWmodel.pdf", width = 1200, height = 800, scale = 4)
+server$export(fig, file = "Figure8_TUWmodel.png", width = 1200, height = 800, scale = 4)
 server$close()
