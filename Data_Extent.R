@@ -144,3 +144,64 @@ writeRaster(et_gleam, "ET_GLEAM_1990_2019.nc", datatype = "INT2S" ,format = "CDF
 writeRaster(et_gleam_mean, "ET_GLEAM_1990_2019_mean.tif", format = "GTiff", overwrite = TRUE)
 
 
+#BH-DGA Stage III and IV
+
+nc_bh3<-nc_open("E:/Datasets/DGA_BH/BH3/4_Base_de_datos/Archivos_netcdf/1_Historico/regionalizacion_1979_2015.nc")
+lon3 <- ncvar_get(nc_bh3,"lon")
+lat3 <- ncvar_get(nc_bh3,"lat")
+
+stack_pp3<-stack("E:/Datasets/DGA_BH/BH3/4_Base_de_datos/Archivos_netcdf/1_Historico/regionalizacion_1979_2015.nc", varname = "pr")
+stack_pp3<-flip(t(stack_pp3), 'x')
+extent(stack_pp3) <- c(min(lon3), max(lon3), min(lat3), max(lat3))
+crs(stack_pp3) <- CRS('+init=EPSG:4326')
+stack_pp3<-setZ(stack_pp3,seq(as.Date("1979/1/1"), as.Date("2015/12/1"), "month"))
+stack_pp3 <- stack_pp3[[which(getZ(stack_pp3) >= as.Date("1984-12-31"))]]
+stack_pp3<-mean(stackApply(stack_pp3, indices<-format(stack_pp3@z$time,"%y"), fun=sum))
+stack_pp3[stack_pp3 == 0] <- NA
+
+stack_et3<-stack("E:/Datasets/DGA_BH/BH3/4_Base_de_datos/Archivos_netcdf/1_Historico/regionalizacion_1979_2015.nc", varname = "ET")
+stack_et3<-flip(t(stack_et3), 'x')
+extent(stack_et3) <- c(min(lon3), max(lon3), min(lat3), max(lat3))
+crs(stack_et3) <- CRS('+init=EPSG:4326')
+stack_et3 <- stack_et3*c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+stack_et3<-setZ(stack_et3,seq(as.Date("1979/1/1"), as.Date("2015/12/1"), "month"))
+stack_et3 <- stack_et3[[which(getZ(stack_et3) >= as.Date("1984-12-31"))]]
+stack_et3<-mean(stackApply(stack_et3, indices<-format(stack_et3@z$time,"%y"), fun=sum))
+stack_et3[stack_et3 == 0] <- NA
+
+stack_pet3<-stack("E:/Datasets/DGA_BH/BH3/4_Base_de_datos/Archivos_netcdf/1_Historico/regionalizacion_1979_2015.nc", varname = "PET")
+stack_pet3<-flip(t(stack_pet3), 'x')
+extent(stack_pet3) <- c(min(lon3), max(lon3), min(lat3), max(lat3))
+crs(stack_pet3) <- CRS('+init=EPSG:4326')
+stack_pet3 <- stack_pet3*c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+stack_pet3<-setZ(stack_pet3,seq(as.Date("1979/1/1"), as.Date("2015/12/1"), "month"))
+stack_pet3 <- stack_pet3[[which(getZ(stack_pet3) >= as.Date("1984-12-31"))]]
+stack_pet3<-mean(stackApply(stack_pet3, indices<-format(stack_pet3@z$time,"%y"), fun=sum))
+stack_pet3[stack_pet3 == 0] <- NA
+
+
+basins_pp<-extract(stack_pp3,basins,fun=mean,na.rm=TRUE)
+basins_pet<-extract(stack_pet3,basins,fun=mean,na.rm=TRUE)
+basins_et<-extract(stack_et3,basins,fun=mean,na.rm=TRUE)
+rownames(basins_pp)<-basins$gridcode
+rownames(basins_pet)<-basins$gridcode
+rownames(basins_et)<-basins$gridcode
+
+write.xlsx(cbind(basins$gridcode,basins_pp, basins_pet, basins_et), "eva_aridity_bh3.xlsx")
+
+stack_pp4<- raster("E:/Datasets/DGA_BH/BH4/4_Base_de_datos/Archivos_raster/BH_85-15/Forzantes/1_Historico/pr_Anual_LatLon.tif")
+stack_pet4<-raster("E:/Datasets/DGA_BH/BH4/4_Base_de_datos/Archivos_raster/BH_85-15/VIC/1_Historico/pet_Anual_LatLon.tif")
+stack_et4<-raster("E:/Datasets/DGA_BH/BH4/4_Base_de_datos/Archivos_raster/BH_85-15/VIC/1_Historico/et_Anual_LatLon.tif")
+
+basins_pp<-extract(stack_pp4,basins,fun=mean,na.rm=TRUE)
+basins_pet<-extract(stack_pet4,basins,fun=mean,na.rm=TRUE)
+basins_et<-extract(stack_et4,basins,fun=mean,na.rm=TRUE)
+rownames(basins_pp)<-basins$gridcode
+rownames(basins_pet)<-basins$gridcode
+rownames(basins_et)<-basins$gridcode
+
+write.xlsx(cbind(basins$gridcode,basins_pp, basins_pet, basins_et), "eva_aridity_bh4.xlsx")
+
+
+
+
