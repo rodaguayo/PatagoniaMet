@@ -57,6 +57,6 @@ fig
 
 server <- orca_serve()
 setwd("C:/Users/rooda/Dropbox/Patagonia/Figures/")
-server$export(fig, file = "Figure8_TUWmodel.pdf", width = 1200, height = 800, scale = 4)
-server$export(fig, file = "Figure8_TUWmodel.png", width = 1200, height = 800, scale = 4)
+server$export(fig, file = "Figure9_TUWmodel.pdf", width = 1200, height = 800, scale = 4)
+server$export(fig, file = "Figure9_TUWmodel.png", width = 1200, height = 800, scale = 4)
 server$close()

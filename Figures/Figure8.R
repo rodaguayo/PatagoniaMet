@@ -80,7 +80,7 @@ fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY
 fig
 
 server <- orca_serve()
-server$export(fig, file = "Figure7_Validation_v2.pdf", width = 1200, height = 1000, scale = 4)
-server$export(fig, file = "Figure7_Validation_v2.png", width = 1200, height = 1000, scale = 4)
+server$export(fig, file = "Figure8_Validation_v2.pdf", width = 1200, height = 1000, scale = 4)
+server$export(fig, file = "Figure8_Validation_v2.png", width = 1200, height = 1000, scale = 4)
 server$close()
 
