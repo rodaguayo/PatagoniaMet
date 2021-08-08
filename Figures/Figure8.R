@@ -7,8 +7,8 @@ library("RColorBrewer")
 
 Sys.setenv(PATH=paste0("C:/Users/rooda/AppData/Local/Programs/orca;", Sys.getenv("PATH")))
 
-data_pp<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Figures/Figure7_Validation_v2.xlsx", sheet = "data_pp")
-data_t2m<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Figures/Figure7_Validation_v2.xlsx", sheet = "data_t2m")
+data_pp<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Figures/Figure8_Validation_v2.xlsx", sheet = "data_pp")
+data_t2m<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Figures/Figure8_Validation_v2.xlsx", sheet = "data_t2m")
 data_pp$Model <- factor(data_pp$Model, levels = c("ERA5d", "MSWEP", "CR2MET","PMET"))
 data_t2m$Model <- factor(data_t2m$Model, levels = c("ERA5d", "MSWEP", "CR2MET","PMET"))
 
