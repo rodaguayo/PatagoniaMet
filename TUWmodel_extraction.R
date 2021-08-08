@@ -6,6 +6,7 @@ library("readxl")
 library("raster")
 
 dem_patagonia<-raster("C:/Users/rooda/Dropbox/ArcGIS/Chile/dem_patagonia1.tif")
+q_data<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "data_monthly"))
 
 basins_int<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Basins_Patagonia83d.shp")
 basins_int<-spTransform(basins_int, crs(dem_patagonia))
@@ -31,10 +32,12 @@ pp_era5d<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_199
 t2m_era5d<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1990_2019_v1.nc", varname = "tas")
 
 data_area<-matrix(0,length(basins_int),7)
-data_area[,1]<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "info"))$Area_km2
+data_area[,1]<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "info"))$total_area
 
 for (i in 1:length(basins_int)) {
-  if (basins_int[i,]$Use == 1){
+  q_data_i<-subset(q_data, Date > "1991-12-31" & Date < "2005-12-31")[,i+1]
+  
+  if (sum(!is.na(q_data_i))/length(q_data_i) >= 2/3 & basins_int$Use[i] == 1){
     
     elev_zones_i<-elevationZones(x=basins_int[i,], dem=dem_patagonia, max.zones = 5, min.elevZ = 300, elev.thres = NULL)
     data_area[i,2]<-length(elev_zones_i$area)
@@ -102,7 +105,8 @@ for (i in 1:length(basins_int)) {
   } else {
     print (i)
   }
-}
+  
+  }
 
 colnames(data_area)<-c("area",	"nbands",	"n1",	"n2",	"n3",	"n4",	"n5")
 write.csv(data_area, "C:/Users/rooda/Dropbox/Rstudio/TUWmodel/data_area.csv")
