@@ -48,7 +48,6 @@ TUWhydromod <- function(param.values, obs=q_obsc_i, PP=pp_i, T2M=t2m_i, PET=pet_
   return(out)}
 
 #test<-TUWhydromod(param.values = ave_params, obs=q_obsc_i, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_m2, INITIAL = t0_cond)
-KGE_params<-read.csv(file)
 
 for (j in 1:4) {
   for (i in 1:83) {
@@ -98,5 +97,5 @@ for (j in 1:4) {
 }
 
 file<-"/home/rooda/Dropbox/Patagonia/MS1 Results/Q_performance.csv"
-ifelse(file.exists(file), file.rename(file, "/home/rooda/Dropbox/Patagonia/MS1 Results/Q_performance_old.csv"))
+ifelse(file.exists(file), file.rename(file, "/home/rooda/Dropbox/Patagonia/MS1 Results/Q_performance_old.csv", overwrite = TRUE))
 write.csv(KGE_params, file, row.names = FALSE)
