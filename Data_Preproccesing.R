@@ -1,104 +1,91 @@
+# Code to change the time step of the different data sets
+# Developed by Rodrigo Aguayo (2020-2022)
+
 rm(list=ls())
 cat("\014")  
 
 library("hydroTSM")
-library("readxl")
+setwd("/home/rooda/Dropbox/Patagonia/Data/")
 
-## Lake levels data
-
-# Monthly time step (> 20 days)
-lake_daily<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Lake Levels/Data_Lakes_Levels_v10.xlsx", sheet = "data_daily", guess_max = 30000))
-lake_daily_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Lake Levels/Data_Lakes_Levels_v10.xlsx", sheet = "data_daily", guess_max = 30000))
+## Lake levels data: Daily to monthly time step (> 20 days)
+lake_daily   <- read.csv("Lake Levels/Data_Lakes_Levels_v10_daily.csv")
+lake_daily_c <- read.csv("Lake Levels/Data_Lakes_Levels_v10_daily.csv")
 
 lake_daily_c[,2:length(lake_daily)][lake_daily_c[,2:length(lake_daily)]>-99 ]<- 1
-lake_monthly_c<-daily2monthly(lake_daily_c, FUN = sum, na.rm = TRUE)
-lake_monthly<-daily2monthly(lake_daily, FUN = mean, na.rm = TRUE)
+lake_monthly_c <- daily2monthly(lake_daily_c, FUN = sum,  na.rm = TRUE)
+lake_monthly   <- daily2monthly(lake_daily,   FUN = mean, na.rm = TRUE)
 lake_monthly[lake_monthly_c < 20]<-NA
 lake_monthly<-round(lake_monthly,2)
-write.csv(lake_monthly, "C:/Users/rooda/Dropbox/Rstudio/Data_Lake_Levels_m.csv")
+write.csv(lake_monthly, "Lake Levels/Data_Lakes_Levels_v10_monthly.csv")
 
-## Streamflow data 
-
-# Monthly time step (> 20 days)
-streamflow_daily<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "data_daily", guess_max = 30000))
-streamflow_daily_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "data_daily", guess_max = 30000))
+## Streamflow data: Daily to monthly (> 20 days) and annual (> 10 months) time step 
+streamflow_daily   <- read.csv("Streamflow/Data_streamflow_v10_daily.csv")
+streamflow_daily_c <- read.csv("Streamflow/Data_streamflow_v10_daily.csv")
 
 streamflow_daily_c[,2:length(streamflow_daily)][streamflow_daily_c[,2:length(streamflow_daily)]>-99 ]<- 1
 streamflow_monthly_c<-daily2monthly(streamflow_daily_c, FUN = sum, na.rm = TRUE)
 streamflow_monthly<-daily2monthly(streamflow_daily, FUN = mean, na.rm = TRUE)
 streamflow_monthly[streamflow_monthly_c < 20]<-NA
 streamflow_monthly<-round(streamflow_monthly,2)
-write.csv(streamflow_monthly, "C:/Users/rooda/Dropbox/Rstudio/Data_Streamflow_m.csv")
+write.csv(streamflow_monthly, "Streamflow/Data_streamflow_v10_monthly.csv")
 
-
-## Precipitation data
-
-# Monthly time step (> 20 days)
-pp_daily   <-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_daily", guess_max = 30000))
-pp_daily_c <-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_daily", guess_max = 30000))
+## Precipitation data: Daily to monthly (> 20 days) and annual (> 10 months) time step 
+pp_daily   <-read.csv("Precipitation/Data_precipitation_v10_daily.csv")
+pp_daily_c <-read.csv("Precipitation/Data_precipitation_v10_daily.csv")
 
 pp_daily_c[,2:length(pp_daily)][pp_daily_c[,2:length(pp_daily)]>-99 ]<- 1
 pp_monthly_c <- daily2monthly(pp_daily_c, FUN = sum, na.rm = TRUE)
 pp_monthly   <- daily2monthly(pp_daily, FUN = sum, na.rm = TRUE)
 pp_monthly[pp_monthly_c < 20] <- NA
-write.csv(pp_monthly, "C:/Users/rooda/Dropbox/Rstudio/Data_Precipitation_m.csv")
+write.csv(pp_monthly, "Precipitation/Data_precipitation_v10_monthly.csv")
 
-# Yearly time step (> 10 months)
-pp_monthly<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-pp_monthly_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/precipitation/Data_precipitation_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-
+pp_monthly_c<-pp_monthly
 pp_monthly_c[,2:length(pp_monthly)][pp_monthly_c[,2:length(pp_monthly)]>-99 ]<- 1
 pp_annual_c  <- data.frame(monthly2annual(pp_monthly_c, FUN = sum, na.rm = TRUE))
-pp_annual   <- data.frame(monthly2annual(pp_monthly, FUN = sum, na.rm = TRUE))
+pp_annual    <- data.frame(monthly2annual(pp_monthly, FUN = sum, na.rm = TRUE))
 pp_annual[pp_annual_c < 11] <- NA
-write.csv(pp_annual, "C:/Users/rooda/Dropbox/Rstudio/Data_Precipitation_y.csv")
+write.csv(pp_annual, "Precipitation/Data_precipitation_v10_annual.csv")
 
+## Temperature data: Daily to monthly (> 20 days) and annual (> 10 months) time step
+## Tdaily is the average between the maximum and minimum temperature
+t2m_daily_max   <- read.csv("Temperature/Data_Temperature_max_v10_daily.csv")
+t2m_daily_min   <- read.csv("Temperature/Data_Temperature_min_v10_daily.csv")
+t2m_daily <- (t2m_daily_max[,2:length(t2m_daily_max)]+t2m_daily_min[,2:length(t2m_daily_max)])/2
+t2m_daily <- cbind(t2m_daily_max$Date, t2m_daily)
+write.csv(t2m_daily, "Temperature/Data_Temperature_mean_v10_daily.csv")
 
-## Temperature data
-
-# Monthly time step (> 20 days)
-t2m_daily<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/temperature/Data_temperature_v10.xlsx", sheet = "data_daily", guess_max = 30000))
-t2m_daily_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/temperature/Data_temperature_v10.xlsx", sheet = "data_daily", guess_max = 30000))
-
+t2m_daily_c <-t2m_daily
 t2m_daily_c[,2:length(t2m_daily)][t2m_daily_c[,2:length(t2m_daily)]>-99 ]<- 1
-t2m_monthly_c<-daily2monthly(t2m_daily_c, FUN = sum, na.rm = TRUE)
-t2m_monthly<-daily2monthly(t2m_daily, FUN = mean, na.rm = TRUE)
+t2m_monthly_c  <-daily2monthly(t2m_daily_c, FUN = sum,  na.rm = TRUE)
+t2m_monthly    <-daily2monthly(t2m_daily,   FUN = mean, na.rm = TRUE)
 t2m_monthly[t2m_monthly_c < 20]<-NA
 t2m_monthly<-round(t2m_monthly,2)
-write.csv(t2m_monthly, "C:/Users/rooda/Dropbox/Rstudio/Data_Temperature_m.csv")
+write.csv(t2m_monthly, "Temperature/Data_Temperature_mean_v10_monthly.csv")
 
-# Yearly time step (> 10 months)
-t2m_monthly<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/temperature/Data_temperature_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-t2m_monthly_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/temperature/Data_temperature_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-
+t2m_monthly_c<-t2m_monthly
 t2m_monthly_c[,2:length(t2m_monthly)][t2m_monthly_c[,2:length(t2m_monthly)]>-99 ]<- 1
-t2m_annual_c  <- data.frame(monthly2annual(t2m_monthly_c, FUN = sum, na.rm = TRUE))
-t2m_annual   <- data.frame(monthly2annual(t2m_monthly, FUN = mean, na.rm = TRUE))
+t2m_annual_c  <- data.frame(monthly2annual(t2m_monthly_c, FUN = sum,  na.rm = TRUE))
+t2m_annual    <- data.frame(monthly2annual(t2m_monthly,   FUN = mean, na.rm = TRUE))
 t2m_annual[t2m_annual_c < 11] <- NA
 t2m_annual<-round(t2m_annual,2)
-write.csv(t2m_annual, "C:/Users/rooda/Dropbox/Rstudio/Data_Temperature_y.csv")
+write.csv(t2m_annual, "Temperature/Data_temperature_mean_v10_annual.csv")
 
 
-## Potential evapotranspiration data
-
-# Monthly time step (> 20 days)
-pet_daily<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/Data_Evapotranspiration_v10.xlsx", sheet = "data_daily", guess_max = 30000))
-pet_daily_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/Data_Evapotranspiration_v10.xlsx", sheet = "data_daily", guess_max = 30000))
+## Potential evapotranspiration data: Daily to monthly (> 20 days) and annual (> 10 months) time step
+pet_daily   <-read.csv("Evapotranspiration/Data_Evapotranspiration_v10_daily.csv")
+pet_daily_c <-read.csv("Evapotranspiration/Data_Evapotranspiration_v10_daily.csv")
 
 pet_daily_c[,2:length(pet_daily)][pet_daily_c[,2:length(pet_daily)]>-99 ]<- 1
 pet_monthly_c<-daily2monthly(pet_daily_c, FUN = sum, na.rm = TRUE)
 pet_monthly<-daily2monthly(pet_daily, FUN = sum, na.rm = TRUE)
-pet_monthly[pet_monthly_c < 25]<-NA
+pet_monthly[pet_monthly_c < 20]<-NA
 pet_monthly<-round(pet_monthly,1)
-write.csv(pet_monthly, "C:/Users/rooda/Dropbox/Rstudio/Data_PET_m.csv")
+write.csv(pet_monthly, "Evapotranspiration/Data_Evapotranspiration_v10_monthly.csv")
 
-# Yearly time step (> 10 months)
-pet_monthly<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/Data_Evapotranspiration_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-pet_monthly_c<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/Data_Evapotranspiration_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-
+pet_monthly_c<-pet_monthly
 pet_monthly_c[,2:length(pet_monthly)][pet_monthly_c[,2:length(pet_monthly)]>-99 ]<- 1
 pet_annual_c <- data.frame(monthly2annual(pet_monthly_c, FUN = sum, na.rm = TRUE))
 pet_annual   <- data.frame(monthly2annual(pet_monthly, FUN = sum, na.rm = TRUE))
 pet_annual[pet_annual_c < 11]<-NA
 pet_annual<-round(pet_annual, 1)
-write.csv(pet_annual, "C:/Users/rooda/Dropbox/Rstudio/Data_PET_y.csv")
+write.csv(pet_annual, "Evapotranspiration/Data_Evapotranspiration_v10_annual.csv")
