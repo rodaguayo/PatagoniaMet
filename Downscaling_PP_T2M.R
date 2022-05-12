@@ -1,69 +1,59 @@
 rm(list=ls())
 cat("\014")  
 
-library("raster")
+library("terra")
 
-#Sample
-sample <- matrix(rnorm(220*340),340,220)
-sample <- raster(sample)
-extent(sample) <- c(-76,-65,-57,-40)
-projection(sample) <- CRS("+init=epsg:4326")
+#Sample dataset: extent, crs and res
+sample <- rast(extent = ext(c(-76,-65,-57,-40)), crs = "+init=epsg:4326", resolution = 0.05)
+
+#Gridded dataset to downscale
+setwd("/home/rooda/Dropbox/Patagonia/")
+
+pp_stack  <- rast("Data/Precipitation/PP_ERA5_1950_2021m.nc")
+t2m_stack <- rast("Data/Temperature/T2M_ERA5_1950_2021m.nc")
+pp_stack  <- subset(pp_stack, which(time(pp_stack) >= as.POSIXct("1989-12-31")    &   time(pp_stack)  <= as.POSIXct("2019-12-31")))
+t2m_stack <- subset(t2m_stack,which(time(t2m_stack) >= as.POSIXct("1989-12-31")   &   time(t2m_stack) <= as.POSIXct("2019-12-31")))
 
 #Bilinear resampling for PP
-pp_era5<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1950_2019.nc", varname = "tp")
-pp_era5<- resample(pp_era5, sample, method="bilinear")
-pp_era5<-setZ(pp_era5,seq(as.Date("1950/1/1"), as.Date("2019/12/1"), "month"))
-pp_era5<- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
-pp_era5<-setZ(pp_era5,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
+pp_stack_hr   <- resample(pp_stack, sample, method = "bilinear") # should be something better 
+pp_stack_hr_m <- mean(tapp(pp_stack_hr, strftime(time(pp_stack_hr),format="%Y"), fun = sum, na.rm = TRUE)) # mean annual value
 
-pp_era5_mean<-mean(stackApply(pp_era5, indices<-format(pp_era5@z$time,"%y"), fun=sum))
+writeCDF(pp_stack_hr, "Data/Precipitation/PP_ERA5_hr_1990_2019m.nc",  overwrite=TRUE, varname="pp", unit="mm", longname="Precipitation", zname="time", compression = 9)
+writeRaster(pp_stack_hr_m, "Data/Precipitation/PP_ERA5_hr_1990_2019m.tif", overwrite=TRUE)
 
-writeRaster(pp_era5, "PP_ERA5_1990_2019.nc", format = "CDF", datatype='INT2S', overwrite=TRUE, varname="tp", varunit="mm", 
-            longname="precipitation", xname="X", yname="Y", zname="time", zunit="month")
-writeRaster(pp_era5_mean, "PP_ERA5_1990-2019.tif", format = "GTiff")
+#Downscaling using a lapse rate of 6.5 degC km-1
+dem_hr       <- rast("GIS South/dem_patagonia3f.tif")
+dem_hr <- resample(dem_hr,    sample,    method="bilinear")
+dem_lr <- resample(dem_hr,    t2m_stack, method="bilinear")
+dem_lr <- resample(dem_lr,    dem_hr,    method="bilinear")
+factor <- (dem_lr-dem_hr)*0.0065
+factor[is.na(factor)] <- 0
 
+t2m_stack_hr <-resample(t2m_stack, dem_hr, method="near")
+t2m_stack_hr <-t2m_stack_hr+factor
+t2m_stack_hr <-round(t2m_stack_hr, 2)
 
-#Downscaling using a lapse rate of 6.5C km-1
-sample <- matrix(rnorm(220*340),340,220)
-sample <- raster(sample)
-extent(sample) <- c(-76,-65,-57,-40)
-projection(sample) <- CRS("+init=epsg:4326")
+t2m_stack_hr_m <- mean(tapp(t2m_stack_hr, strftime(time(t2m_stack_hr),format="%Y"), fun = mean, na.rm = TRUE)) # mean annual value
 
-dem<-raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/dem_patagonia3f.tif")
-t2m_era5_v0<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1950_2019.nc", varname = "tas")
-t2m_era5_v0<-t2m_era5_v0[[which(getZ(t2m_era5_v0) >= as.Date("1989-12-31"))]]
+writeCDF(t2m_stack_hr, "Data/Temperature/T2M_ERA5_hr_1990_2019m.nc",  overwrite=TRUE, varname="t2m", unit="degC", longname="Temperature", zname="time", compression = 9)
+writeRaster(t2m_stack_hr_m, "Data/Temperature/T2M_ERA5_hr_1990_2019m.tif", overwrite=TRUE)
 
-dem[is.na(dem)] <- 0
-dem_005<-resample(dem, sample, method="bilinear")
-dem_025<-resample(dem, t2m_era5_v0, method="bilinear")
-dem_025<-resample(dem_025, dem_005, method="ngb")
+#Alternative for temperature: best lapse rate according to observations
+t2m_shape <- read.csv("Data/Temperature/Metadata_Temperature_v10.csv")
+t2m_shape <- vect(t2m_shape, geom=c("Longitude", "Latitude"), crs="epsg:4326")
+t2m_obs   <- read.csv("Data/Temperature/Data_Temperature_mean_v10_monthly.csv")
+t2m_obs$Date<-as.Date(t2m_obs$Date) #The date is the first column
 
-t2m_era5_v1<-resample(t2m_era5_v0, dem_005, method="ngb")
-t2m_era5_v1<-t2m_era5_v1+(dem_025-dem_005)*0.0065
-t2m_era5_v1<-round(t2m_era5_v1, 2)
-t2m_era5_v1<-setZ(t2m_era5_v1, getZ(t2m_era5_v0))
-
-t2m_era5_v1_mean<-mean(stackApply(t2m_era5_v1, indices<-format(t2m_era5_v1@z$time,"%y"), fun=mean))
-
-writeRaster(t2m_era5_v1, "T2M_ERA5_1990_2019_v1.nc", format = "CDF", overwrite=TRUE, varname="t2m", varunit="degC", 
-            longname="temperature", xname="X", yname="Y", zname="time", zunit="month")
-writeRaster(t2m_era5_v1_mean, "T2M_ERA5_1990_2019.tif", format = "GTiff")
-
-
-#Alternive: best lapse rate according to 
-
-library("hydroGOF")
-t2m_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Temperature_v10.shp")
-
-ME_t2m_era5_v1 <- function(lr) {
+best_lapse_rate <- function(lr) {
   
-  t2m_era5_v1<-resample(t2m_era5_v0, dem_005, method="ngb")
-  t2m_era5_v1<-t2m_era5_v1+(dem_025-dem_005)*lr
+  t2m_stack_hr<-resample(t2m_stack, dem_hr, method="near")
+  factor      <-(dem_lr-dem_hr)*lr
+  t2m_stack_hr<-t2m_stack_hr+factor
   
-  t2m_sim_era5_v1<-as.data.frame(t(extract(t2m_era5_v1,t2m_shape, method='simple')))
-  ME_t2m_era5_v1<-sum((me(sim=t2m_sim_era5_v1, obs=t2m_obs, na.rm=TRUE))^2)
+  t2m_sim_hr<-as.data.frame(t(extract(t2m_stack_hr,t2m_shape, method='simple')))
+  best_lapse_rate<-sum((hydroGOF::me(sim=t2m_sim_hr, obs=t2m_obs, na.rm=TRUE))^2)
   
 }
 
-best_lr<-optim(0.0065, ME_t2m_era5_v1)
+best_lr<-optim(0.0065, best_lapse_rate)
 
