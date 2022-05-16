@@ -1,3 +1,6 @@
+# Code to replicate potential evapotranspiration validation
+# Developed by Rodrigo Aguayo (2020-2022)
+
 rm(list=ls())
 cat("\014")  
 
@@ -5,16 +8,19 @@ library("hydroGOF")
 library("raster")
 library("readxl")
 
-#Observations
-pet_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Evapotranspiration_v10.shp")
-pet_obs<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/Data_Evapotranspiration_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-pet_obs$Date<-as.Date(pet_obs$Date)
+setwd("/home/rooda/Dropbox/Patagonia/")
 
-#Gleam v3.5a
-pet_gleam<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/PET_GLEAM_1990_2019.nc", varname = "pet")
-pet_gleam <- pet_gleam[[which(getZ(pet_gleam) >= as.Date("2009-12-31"))]]
-pet_gleam<-setNames(pet_gleam, seq(as.Date("2010/1/1"), as.Date("2019/12/31"), "month"))
-pet_gleam<-as.data.frame(t(extract(pet_gleam, pet_shape, method='simple')))
+#Observations (location and data)
+pet_shape <- read.csv("Data/Evapotranspiration/Metadata_Evapotranspiration_v10.csv")
+pet_shape <- vect(pet_shape, geom=c("Longitude", "Latitude"), crs="epsg:4326")
+pet_obs   <- read.csv("Data/Evapotranspiration/Data_Evapotranspiration_v10_monthly.csv")
+pet_obs$Date<-as.Date(pet_obs$Date) #The date is the first column
+
+# GLEAM v3.5a
+pet_gleam <- rast("Data/Evapotranspiration/PET_GLEAM_1990_2019.nc")
+pet_gleam <- pet_gleam[[which(time(pet_gleam) >= as.Date("2009-12-31"))]]
+pet_gleam <-setNames(pet_gleam, seq(as.Date("2010/1/1"), as.Date("2019/12/31"), "month"))
+pet_gleam <-as.data.frame(t(extract(pet_gleam, pet_shape, method='simple')))
 colnames(pet_gleam) <- pet_shape$Name
 
 #Performance

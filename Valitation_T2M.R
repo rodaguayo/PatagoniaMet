@@ -1,16 +1,19 @@
+# Code to replicate temperature validation 
+# Developed by Rodrigo Aguayo (2020-2022)
+
 rm(list=ls())
 cat("\014")  
 
 library("hydroGOF")
-library("raster")
-library("readxl")
+library("terra")
 
-#Temperature validation
+setwd("/home/rooda/Dropbox/Patagonia/Data/Temperature/")
 
-#Observations
-t2m_shape<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Temperature_v10.shp")
-t2m_obs<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/Data_temperature_v10.xlsx", sheet = "data_monthly", guess_max = 30000))
-t2m_obs$Date<-as.Date(t2m_obs$Date)
+#Observations (location and data)
+t2m_shape <- read.csv("Metadata_Temperature/v10.csv")
+t2m_shape <- vect(t2m_shape, geom=c("Longitude", "Latitude"), crs="epsg:4326")
+t2m_obs   <- read.csv("Data_Temperature_v10_monthly.csv")
+t2m_obs$Date<-as.Date(t2m_obs$Date) #The date is the first column
 
 #Climate models (reanalysis, satellites, etc)
 t2m_era5<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1950_2019.nc", varname = "tas")
