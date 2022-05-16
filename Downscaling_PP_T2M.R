@@ -1,3 +1,6 @@
+# Code to downscale reanalysis data
+# Developed by Rodrigo Aguayo (2020-2022)
+
 rm(list=ls())
 cat("\014")  
 
@@ -14,14 +17,14 @@ t2m_stack <- rast("Data/Temperature/T2M_ERA5_1950_2021m.nc")
 pp_stack  <- subset(pp_stack, which(time(pp_stack) >= as.POSIXct("1989-12-31")    &   time(pp_stack)  <= as.POSIXct("2019-12-31")))
 t2m_stack <- subset(t2m_stack,which(time(t2m_stack) >= as.POSIXct("1989-12-31")   &   time(t2m_stack) <= as.POSIXct("2019-12-31")))
 
-#Bilinear resampling for PP
+#Precipitation downscaling: bilinear resampling
 pp_stack_hr   <- resample(pp_stack, sample, method = "bilinear") # should be something better 
 pp_stack_hr_m <- mean(tapp(pp_stack_hr, strftime(time(pp_stack_hr),format="%Y"), fun = sum, na.rm = TRUE)) # mean annual value
 
 writeCDF(pp_stack_hr, "Data/Precipitation/PP_ERA5_hr_1990_2019m.nc",  overwrite=TRUE, varname="pp", unit="mm", longname="Precipitation", zname="time", compression = 9)
 writeRaster(pp_stack_hr_m, "Data/Precipitation/PP_ERA5_hr_1990_2019m.tif", overwrite=TRUE)
 
-#Downscaling using a lapse rate of 6.5 degC km-1
+#Temperature downscaling: lapse rate = 6.5 degC km-1
 dem_hr       <- rast("GIS South/dem_patagonia3f.tif")
 dem_hr <- resample(dem_hr,    sample,    method="bilinear")
 dem_lr <- resample(dem_hr,    t2m_stack, method="bilinear")
