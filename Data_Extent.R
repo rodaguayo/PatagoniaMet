@@ -1,4 +1,4 @@
-# Code to change preprocess reanalysis datasets used in Aguayo et al. (in review)
+# Code to reprocessing reanalysis datasets used in Aguayo et al. (in review)
 # Developed by Rodrigo Aguayo (2020-2022)
 
 rm(list=ls())
@@ -112,22 +112,22 @@ writeCDF(stack_pp,  "Precipitation/PP_MERRA2_1980_2015m.nc", overwrite=TRUE, var
 writeCDF(stack_t2m, "Temperature/T2M_MERRA2_1980_2015m.nc",  overwrite=TRUE, varname="t2m", unit="degC", longname="Temperature", zname="time", compression = 9)
 
 #Patagonia: PET-ET Gleam
-fill.na <- function(x, i=5) {if( is.na(x)[i] ) {return(mean(x, na.rm=TRUE))} else {return(x[i])}}  
+pet_stack<-rast("/home/rooda/Documents/PET_GLEAM35a_1980_2020m.nc")
+pet_stack<-t(pet_stack)
+ext(pet_stack)<-c(-180, 180, -90, 90)
+pet_stack<-flip(pet_stack, direction = "h")
+crs(pet_stack)<-"+init=epsg:4326"
+pet_stack<-round(crop(pet_stack, cut), 0)
 
-pet_gleam<-flip(t(stack("C:/Users/rooda/Downloads/Ep_1980-2020_GLEAM_v3.5a_MO.nc", varname = "Ep")), 1)
-crs(pet_gleam)<-CRS("+init=epsg:4326")
-pet_gleam<-crop(pet_gleam, cut)
+pet_stack<-focal(pet_stack, w=3, fun=mean, NAonly=T, na.rm=T) # Fill NAs
+time(pet_stack)<-seq(as.POSIXct("1980-01-01"), as.POSIXct("2020-12-31"), "month")
+pet_stack[pet_stack == 0] <- NA
 
-for(i in 1:492) {pet_gleam[[i]]<- focal(pet_gleam[[i]], w = matrix(1,3,3), fun = fill.na, pad = TRUE, na.rm = FALSE)}
-pet_gleam<-setZ(pet_gleam, seq(as.Date("1980/1/1"), as.Date("2020/12/31"), "month"))
-pet_gleam<-subset(pet_gleam, which(getZ(pet_gleam) >= '1990-01-01' & (getZ(pet_gleam) <= '2019-12-31')))
-pet_gleam_mean<-mean(stackApply(pet_gleam, indices<-format(pet_gleam@z$time,"%y"), fun=sum))
-pet_gleam_mean[pet_gleam_mean == 0] <- NA
-writeRaster(pet_gleam, "PET_GLEAM_1990_2019.nc", datatype = "INT2S" ,format = "CDF", overwrite=TRUE, varname="pet", varunit="mm", xname="Longitude",   yname="Latitude", zname="Time(Month)")
-writeRaster(pet_gleam_mean, "PET_GLEAM_1990_2019_mean.tif", format = "GTiff", overwrite = TRUE)
+writeCDF(stack_pet, "Evapotranspiration/PET_GLEAM35a_1980_2020m.nc",  overwrite=TRUE, varname="pet", unit="mm", longname="Potenntial evapotranspiration", zname="time", compression = 9)
+
+
 
 #BH-DGA Stage III and IV
-
 nc_bh3<-nc_open("E:/Datasets/DGA_BH/BH3/4_Base_de_datos/Archivos_netcdf/1_Historico/regionalizacion_1979_2015.nc")
 lon3 <- ncvar_get(nc_bh3,"lon")
 lat3 <- ncvar_get(nc_bh3,"lat")
@@ -160,7 +160,6 @@ stack_pet3<-setZ(stack_pet3,seq(as.Date("1979/1/1"), as.Date("2015/12/1"), "mont
 stack_pet3 <- stack_pet3[[which(getZ(stack_pet3) >= as.Date("1984-12-31"))]]
 stack_pet3<-mean(stackApply(stack_pet3, indices<-format(stack_pet3@z$time,"%y"), fun=sum))
 stack_pet3[stack_pet3 == 0] <- NA
-
 
 basins_pp<-extract(stack_pp3,basins,fun=mean,na.rm=TRUE)
 basins_pet<-extract(stack_pet3,basins,fun=mean,na.rm=TRUE)
