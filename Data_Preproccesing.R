@@ -19,15 +19,26 @@ lake_monthly<-round(lake_monthly,2)
 write.csv(lake_monthly, "Lake Levels/Data_Lakes_Levels_v10_monthly.csv")
 
 ## Streamflow data: Daily to monthly (> 20 days) and annual (> 10 months) time step 
-streamflow_daily   <- read.csv("Streamflow/Data_streamflow_v10_daily.csv")
-streamflow_daily_c <- read.csv("Streamflow/Data_streamflow_v10_daily.csv")
+streamflow_daily   <- read.csv("Streamflow/Data_Streamflow_v10_daily.csv")
+streamflow_daily_c <- read.csv("Streamflow/Data_Streamflow_v10_daily.csv")
 
+Date <-seq(from = as.Date(min(streamflow_daily$Date)), to = as.Date(max(streamflow_daily$Date)), by = "month")
 streamflow_daily_c[,2:length(streamflow_daily)][streamflow_daily_c[,2:length(streamflow_daily)]>-99 ]<- 1
-streamflow_monthly_c<-daily2monthly(streamflow_daily_c, FUN = sum, na.rm = TRUE)
-streamflow_monthly<-daily2monthly(streamflow_daily, FUN = mean, na.rm = TRUE)
-streamflow_monthly[streamflow_monthly_c < 20]<-NA
-streamflow_monthly<-round(streamflow_monthly,2)
-write.csv(streamflow_monthly, "Streamflow/Data_streamflow_v10_monthly.csv")
+streamflow_monthly_c <- data.frame(daily2monthly(streamflow_daily_c, FUN = sum, na.rm = TRUE))
+streamflow_monthly   <- data.frame(daily2monthly(streamflow_daily,   FUN = mean, na.rm = TRUE))
+streamflow_monthly   <- round(streamflow_monthly, 2)
+streamflow_monthly[streamflow_monthly_c < 20] <- NA
+streamflow_monthly   <- cbind(Date, streamflow_monthly)
+write.csv(streamflow_monthly, "Streamflow/Data_Streamflow_v10_monthly.csv", row.names = F)
+
+streamflow_monthly_c<-streamflow_monthly
+Date <-seq(from = as.Date(min(streamflow_monthly$Date)), to = as.Date(max(streamflow_monthly$Date)), by = "year")
+streamflow_annual_c  <- data.frame(monthly2annual(streamflow_monthly_c, FUN = sum, na.rm = TRUE))
+streamflow_annual    <- data.frame(monthly2annual(streamflow_monthly,   FUN = mean, na.rm = TRUE))
+streamflow_annual   <- round(streamflow_annual, 2)
+streamflow_annual[streamflow_annual_c < 10] <- NA
+streamflow_annual   <- cbind(Date, streamflow_annual)
+write.csv(pp_annual, "Streamflow/Data_Streamflow_v10_annual.csv")
 
 ## Precipitation data: Daily to monthly (> 20 days) and annual (> 10 months) time step 
 pp_daily   <-read.csv("Precipitation/Data_precipitation_v10_daily.csv")
