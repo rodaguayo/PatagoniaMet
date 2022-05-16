@@ -1,15 +1,19 @@
+# Code for extranting attributes
+# Developed by Rodrigo Aguayo (2020-2022)
+
 rm(list=ls())
 cat("\014")  
 
-library("raster")
-library("xlsx")
+setwd("/home/rooda/Dropbox/Patagonia/")
+
+library("terra")
 
 #Merge polygons by gridcode
-lista<-list.files(path="C:/Users/rooda/Dropbox/Patagonia/GIS South/Shapefiles2", pattern = "shp$", full.names = TRUE)
+list <-list.files(path="/GIS South/Shapefiles2", pattern = "shp$", full.names = TRUE)
 ab<-shapefile(lista[1])
 
 for(i in 1:82){
-b<-shapefile(lista[i+1])
+b <- shapefile(lista[i+1])
 b <- spTransform(b, crs(ab))
 ab<-rbind(ab,b, makeUniqueIDs = TRUE)
 print(i)
@@ -25,18 +29,18 @@ ab<-ab[order(as.numeric(ab$gridcode)),]
 ab <- spTransform(ab, crs("+init=epsg:4326"))
 shapefile(ab,"Basins_Patagonia83d.shp", overwrite = TRUE)
 
-#Extract elevation and ...
-basins<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Basins_Patagonia83d.shp")
-basins_int<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Basins_Patagonia83.shp")
 
-#dem90<-raster("C:/Users/Rodrigo/Dropbox/Patagonia/GIS South/dem_patagonia3f.tif")
-#dem90_r<-extract(dem90,basins,fun=mean,na.rm=TRUE)
-#rownames(dem90_r)<-basins$gridcode
-#write.xlsx(dem90_r,"dem_r.xlsx")
 
-pp_era5<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1979_2019.nc")
-pp_era5<-setZ(pp_era5,seq(as.Date("1979/1/1"), as.Date("2019/12/1"), "month"))
-pp_era5 <- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
+
+basin_data    <-read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
+basin_shp     <-vect("GIS South/Basins_Patagonia83d.shp")
+basin_shp_int <-shapefile("GIS South/Basins_Patagonia83.shp")
+
+dem    <-rast("GIS South/dem_patagonia3f.tif")
+basin_data$mean_elevation<-extract(dem, basin_shp, fun=mean, na.rm=TRUE)
+
+pp_stack <- rast("Data/Precipitation/PP_ERA5_hr_1990_2019m.nc")
+pp_stack <- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
 pp_era5<-mean(stackApply(pp_era5, indices<-format(pp_era5@z$time,"%y"), fun=sum))
 
 pp_merra2<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_MERRA2_1980_2019.nc")
