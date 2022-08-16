@@ -4,99 +4,101 @@ cat("\014")
 library("TUWmodel")
 library("hydroGOF")
 library("hydroPSO")
-
 setwd("/home/rooda/Dropbox/Patagonia/")
 
-#Warm up, calibration and validation period 
-cal_period <- c("1992-12-31", "2006-12-31")
-val_period <- c("2007-01-01", "2019-12-31")
-dates      <- seq(as.Date("1990-01-01"), as.Date("2019-12-31"), by ="month")
+# Warm up, calibration and validation period
+cal_period  <- c("1983-01-01", "2001-12-31")
+val_period  <- c("2002-01-01", "2019-12-31")
+dates       <- seq(as.Date("1980-01-01"), as.Date("2019-12-31"), by ="day")
 
-#General setting
-days  <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-q_obs <- read.csv("Data/Streamflow/Data_Streamflow_v10_monthly.csv")
-q_obs <- subset(q_obs, Date >= "1989-12-31")
-areas <- read.csv("MS1 Results/TUWmodel/data_area.csv")
+# General setting
+q_obs <- read.csv("Data/Streamflow/Data_Streamflow_v10_daily.csv")
+q_obs <- subset(q_obs, as.Date(q_obs$Date) >= dates[1] & as.Date(q_obs$Date) <= val_period[2])[,-1]
+areas <- read.csv("MS1 Results/TUWmodel/data_area.csv", row.names=1)
 dirs  <- list.dirs("MS1 Results/TUWmodel", full.names = TRUE, recursive =FALSE)[1:4]
 
-#Parameters: Lower and upper bound
-names_param        <-  c("SCF", "DDF", "Tr",  "Ts", "Tm", "LPrat",  "FC","Beta", "k0", "k1", "k2", "lsuz", "cperc", "bmax", "croute")
-lower_param        <-  c(1.0,    3.0,   1.0,  -5.0, -2.0,   0.1,      10,     0,    0,  1.5,    6,      1,     0,      0,       10)
-upper_param        <-  c(1.0,     40,   6.0,   1.0,  2.0,   1.0,    3000,    20,  1.5,    6,   18,     50,     8,     30,       40)
-ave_params         <-  c(1.0,     20,   3.0,  -2.5,  0.0,   0.6,    1000,    10,  1.0,    3,   14,     25,     4,     15,       25)
-names(upper_param) <-  names_param
-names(lower_param) <-  names_param
-names(ave_params)  <-  names_param
+# Parameters: Lower and upper bound (Tm podria ser +-1.5)
 
-#Perfomance metric (KGE 2012)
-KGE_params <- data.frame(matrix(ncol = 7+length(names_param), nrow = 55*4))
-colnames(KGE_params) <- c("Name", "Model", "Stage","KGE", "r", "Beta", "Gamma", names_param)
-seq<-seq(1,55*2,2)
-q_sim_final<-q_obs
+lower_param        <-  c(1.0,    0.0,   1.0,  -3.0,  -1.5,     0.0,     0,      0,    0,    2,   30,      1,       0,      0,        0)
+upper_param        <-  c(1.0,    5.0,   3.0,   1.0,   1.5,     1.0,   600,     20,    2,   30,  180,    100,       8,     30,       50)
+names(upper_param) <-  c("SCF", "DDF", "Tr",  "Ts",  "Tm", "LPrat",  "FC", "Beta", "k0", "k1", "k2", "lsuz", "cperc", "bmax", "croute")
+names(lower_param) <-  names(upper_param) 
+
+# Performance metric (KGE 2012)
+KGE_params <- data.frame(matrix(ncol = 7+length(upper_param), nrow = 0))
 
 # Evaluating the hydrological model using the parameter set
-TUWhydromod <- function(param.values, obs=q_obsc_i, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_m2, INITIAL= t0_cond) {
-
-  simLump   <- TUWmodel::TUWmodel(param=param.values, prec=as.matrix(PP), airt=as.matrix(T2M), ep=as.matrix(PET), area=AREA, incon=INITIAL)
-  q_sim     <- subset(as.numeric(simLump$q), dates >= cal_period[1] & dates < cal_period[2])
-  gof       <- KGE(sim=q_sim, obs=obs, method="2012", na.rm=TRUE)
+TUWhydromod <- function(param.values, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_i, obs=q_obs_i) {
   
-  out       <- vector("list", 2)   # Creating the output of the R function
-  out[[1]]  <- gof
-  out[[2]]  <- q_sim
-  names(out) <- c("GoF", "sim")  # Mandatory names for the elements of the output
+  PP     <- subset(PP,  dates <= cal_period[2])
+  T2M    <- subset(T2M, dates <= cal_period[2])
+  PET    <- subset(PET, dates <= cal_period[2])
+  obs    <- subset(obs, dates <= cal_period[2])
   
-  return(out)}
+  tuwsim <- TUWmodel(param = param.values, prec = PP, airt = T2M, ep = PET, area = AREA)
+  tuwsim <- as.numeric(tuwsim$q)
+  
+  obs    <- subset(obs,    dates >= cal_period[1] & dates < cal_period[2])
+  mu_obs <- (0.01 * mean(obs, na.rm = TRUE))^0.25
+  obs    <- (obs^0.25 - mu_obs) / 0.25
+  
+  q_sim  <- subset(tuwsim, dates >= cal_period[1] & dates < cal_period[2])
+  q_sim  <- (q_sim^0.25 - mu_obs) / 0.25
+  
+  gof    <- KGE(sim=q_sim, obs=obs, method="2012", na.rm=TRUE)
+  out     <- list("GoF" = gof, "sim" = q_sim)
+  return(out)
+  }
 
-#test<-TUWhydromod(param.values = ave_params, obs=q_obsc_i, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_m2, INITIAL = t0_cond)
+for (model in 1:4) { #number of scenarios
+  for (basin in 1:(length(q_obs))) { #total number of basins
+    if (areas$nbands[basin] > 0){ 
+      
+      q_obs_i  <- q_obs[,basin]*1000*86400/(areas$area[basin]*10^6)
+      pp_i    <- paste0(dirs[model],"/PP/PP_gridcode_",   sprintf("%03d", basin), ".csv")
+      t2m_i   <- paste0(dirs[model],"/T2M/T2M_gridcode_", sprintf("%03d", basin), ".csv")
+      pet_i   <- paste0(dirs[model],"/PET/PET_gridcode_", sprintf("%03d", basin), ".csv")
+      pp_i    <- as.matrix(read.csv(pp_i,  sep = ",", row.names=1, header = TRUE))
+      t2m_i   <- as.matrix(read.csv(t2m_i, sep = ",", row.names=1, header = TRUE))
+      pet_i   <- as.matrix(read.csv(pet_i, sep = ",", row.names=1, header = TRUE))
+      pet_i[is.na(pet_i)] <- 0
+      area_i  <- rep(1/areas$nbands[basin], areas$nbands[basin])
+      
+      out <- hydroPSO(fn="hydromodInR", lower=lower_param,  upper=upper_param, method="spso2011", model.FUN="TUWhydromod", 
+                      control = list(write2disk=TRUE, MinMax="max", npart=40, maxit=100, normalise=TRUE, REPORT=5, reltol=1E-6, 
+                                     parallel = "parallel", par.nnodes = 20), model.FUN.args= list(obs=q_obs_i, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_i))
+      
+      tuw_model_i <- TUWmodel(prec = pp_i, airt = t2m_i, ep = pet_i, area = area_i, param=out$par)
+      tuw_model_i <- as.numeric(tuw_model_i$q)
+      
+      q_obs_is <- subset(q_obs_i,     dates >= cal_period[1] & dates < cal_period[2])
+      mu_obs   <- (0.01 * mean(q_obs_is, na.rm = TRUE))^0.25
+      q_obs_is <- (q_obs_is^0.25 - mu_obs) / 0.25
+      q_sim_is <- subset(tuw_model_i, dates >= cal_period[1] & dates < cal_period[2])
+      q_sim_is <- (q_sim_is^0.25 - mu_obs) / 0.25
+      
+      KGE_i <- KGE(sim = q_sim_is, obs = q_obs_is, method = "2012", out.type = "full", na.rm=TRUE)
+      KGE_i <- as.numeric(c(KGE_i$KGE.value, KGE_i$KGE.elements)) 
+      KGE_i <- c(colnames(q_obs)[basin], basename(dirs)[model], "Calibration", KGE_i, as.numeric(out$par))
+      KGE_params <- rbind(KGE_params, KGE_i)
+      
+      q_obs_is <- subset(q_obs_i,     dates >= val_period[1] & dates < val_period[2])
+      mu_obs   <- (0.01 * mean(q_obs_is, na.rm = TRUE))^0.25
+      q_obs_is <- (q_obs_is^0.25 - mu_obs) / 0.25
+      q_sim_is <- subset(tuw_model_i, dates >= val_period[1] & dates < val_period[2])
+      q_sim_is <- (q_sim_is^0.25 - mu_obs) / 0.25
+      
+      KGE_i <- KGE(sim = q_sim_is, obs = q_obs_is, method = "2012", out.type = "full", na.rm=TRUE)
+      KGE_i <- as.numeric(c(KGE_i$KGE.value, KGE_i$KGE.elements)) 
+      KGE_i <- c(colnames(q_obs)[basin], basename(dirs)[model], "Validation", KGE_i, as.numeric(out$par))
+      KGE_params <- rbind(KGE_params, KGE_i)
 
-for (j in 1:4) { #number of scenarios
-  for (i in 1:(length(q_obs)-1)) { #total number of basins
-    if (areas$nbands[i] != 0){ 
-      
-      q_obs_i  <- q_obs[,i+1]*1000*86400*days/(areas$area[i]*10^6)
-      q_obsc_i <- subset(q_obs_i, dates >= cal_period[1] & dates < cal_period[2])
-      q_obsv_i <- subset(q_obs_i, dates > cal_period[2])
-      
-      pp_i    <- paste0(dirs[j],"/PP/PP_gridcode_",   sprintf("%03d", i), ".csv")
-      t2m_i   <- paste0(dirs[j],"/T2M/T2M_gridcode_", sprintf("%03d", i), ".csv")
-      pet_i   <- paste0(dirs[j],"/PET/PET_gridcode_", sprintf("%03d", i), ".csv")
-      pp_i    <- read.table(pp_i,  sep = ",", row.names=1, header = TRUE)
-      t2m_i   <- read.table(t2m_i, sep = ",", row.names=1, header = TRUE)
-      pet_i   <- read.table(pet_i, sep = ",", row.names=1, header = TRUE)
-      area_m2 <- areas[i,4:(areas$nbands[i]+3)]
-      t0_cond <- 1.5*matrix(mean(q_obs_i[seq(1, length(q_obs_i), 12)], na.rm = TRUE),4,areas$nbands[i])
-      
-      #out <- hydroPSO(fn="hydromodInR", lower=lower_param,  upper=upper_param, method="spso2007", model.FUN="TUWhydromod",
-      #          control=list(write2disk=FALSE, MinMax="max", maxit=200, normalise=TRUE, REPORT=5, reltol= 1E-6, parallel = "parallel"),
-      #          model.FUN.args= list(obs=q_obsc_i, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_m2, INITIAL= t0_cond))
-
-      out <- hydroPSO(fn="hydromodInR", lower=lower_param,  upper=upper_param, method="spso2011", model.FUN="TUWhydromod",
-                      control=list(write2disk=FALSE, MinMax="max", npart=100, maxit=100, normalise=TRUE, REPORT=5, reltol=1E-6, parallel = "parallel"),
-                      model.FUN.args= list(obs=q_obsc_i, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_m2, INITIAL= t0_cond))
-      
-      tuw_model_q  <- TUWmodel(prec = as.matrix(pp_i), airt= as.matrix(t2m_i), ep =  as.matrix(pet_i), 
-                            area= area_m2, param=out$par, itsteps=NULL, incon=t0_cond)
-      
-      q_sim_final[,i+1] <- as.numeric(tuw_model_q$q)
-      q_sim_cal         <- subset(as.numeric(tuw_model_q$q), dates >= cal_period[1] & dates < cal_period[2])
-      q_sim_val         <- subset(as.numeric(tuw_model_q$q), dates > cal_period[2])
-      
-      KGE_cal_i <- KGE(sim=as.vector(q_sim_cal), obs=q_obsc_i, method="2012", out.type="full", na.rm=TRUE)
-      KGE_val_i <- KGE(sim=as.vector(q_sim_val), obs=q_obsv_i, method="2012", out.type="full", na.rm=TRUE)
-      
-      index<-sum(areas$nbands[1:i]>0)
-      KGE_params[seq[index]+110*(j-1),]  <-c(colnames(q_obs)[i+1],colnames(q_obsc_i),basename(dirs)[j], "Calibration", KGE_cal_i$KGE.value, KGE_cal_i$KGE.elements, out$par)
-      KGE_params[seq[index]+110*(j-1)+1,]<-c(colnames(q_obs)[i+1],colnames(q_obsv_i),basename(dirs)[j], "Validation",  KGE_val_i$KGE.value, KGE_val_i$KGE.elements, out$par)
-      
-      plot.zoo(cbind(q_obs_i, q_sim_final[,i+1]), type = "l", plot.type = "single", col = c("blue", "black"), 
-               main = paste0(colnames(q_obs)[i+1],": ", round(KGE_cal_i$KGE.value,3)," - " , round(KGE_val_i$KGE.value,3)))
+      plot.zoo(cbind(q_obs_i, tuw_model_i), type = "l", plot.type = "single", col = c("red", "black"),
+               main = paste0(colnames(q_obs)[basin],": ", round(as.numeric(KGE_i[4]),3)))
       }
-    print(paste0(j," - ",i))
-    print(out$par)
+    print(paste0(basename(dirs)[model]," - ", basin))
     }
 }
 
-file<-"MS1 Results/Q_performance.csv"
-ifelse(file.exists(file), file.rename(file, "MS1 Results/Q_performance_old.csv", overwrite = TRUE))
-write.csv(KGE_params, file, row.names = FALSE)
+colnames(KGE_params) <- c("Name", "Model", "Stage","KGE", "r", "Beta", "Gamma", names(upper_param))
+write.csv(KGE_params, "MS1 Results/Q_performance.csv", row.names = FALSE)
