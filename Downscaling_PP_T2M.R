@@ -5,58 +5,75 @@ rm(list=ls())
 cat("\014")  
 
 library("terra")
+terraOptions(memfrac=0.90)
+terraOptions(verbose=T)
 
 #Sample dataset: extent, crs and res
-sample <- rast(extent = ext(c(-76,-65,-57,-40)), crs = "+init=epsg:4326", resolution = 0.05)
-
-#Gridded dataset to downscale
+sample <- rast(extent = ext(c(-75.75, -68.25, -55.75, -40.5)), crs = "+init=epsg:4326", resolution = 0.05)
 setwd("/home/rooda/Dropbox/Patagonia/")
-
-pp_stack  <- rast("Data/Precipitation/PP_ERA5_1950_2021m.nc")
-t2m_stack <- rast("Data/Temperature/T2M_ERA5_1950_2021m.nc")
-pp_stack  <- subset(pp_stack, which(time(pp_stack) >= as.POSIXct("1989-12-31")    &   time(pp_stack)  <= as.POSIXct("2019-12-31")))
-t2m_stack <- subset(t2m_stack,which(time(t2m_stack) >= as.POSIXct("1989-12-31")   &   time(t2m_stack) <= as.POSIXct("2019-12-31")))
+dem    <- rast("GIS South/dem_patagonia005.tif")
+period <- c(as.Date("1980-01-01"), as.Date("2020-12-31"))
 
 #Precipitation downscaling: bilinear resampling
-pp_stack_hr   <- resample(pp_stack, sample, method = "bilinear") # should be something better 
-pp_stack_hr_m <- mean(tapp(pp_stack_hr, strftime(time(pp_stack_hr),format="%Y"), fun = sum, na.rm = TRUE)) # mean annual value
+pp_stack <- rast("Data/Precipitation/PP_ERA5_1959_2021d.nc")
+pp_stack <- subset(pp_stack,  which(time(pp_stack)  >= period[1] & time(pp_stack)   <= period[2]))
+pp_stack <- resample(pp_stack, sample, method = "bilinear") # should be something better
+pp_stack <- pp_stack * is.finite(dem)
+pp_stack <- round(pp_stack, 0)
 
-writeCDF(pp_stack_hr, "Data/Precipitation/PP_ERA5_hr_1990_2019m.nc",  overwrite=TRUE, varname="pp", unit="mm", longname="Precipitation", zname="time", compression = 9)
-writeRaster(pp_stack_hr_m, "Data/Precipitation/PP_ERA5_hr_1990_2019m.tif", overwrite=TRUE)
+pp_stack_m <- tapp(pp_stack,   strftime(time(pp_stack), format="%Y-%m"), fun = sum, na.rm = TRUE)
+terra::time(pp_stack_m) <- seq(from = period[1], to = period[2], by = "month")
+pp_stack_y <- tapp(pp_stack_m, strftime(time(pp_stack_m), format="%Y"),  fun = sum, na.rm = TRUE)
+pp_stack_y <- mean(pp_stack_y)
 
-#Temperature downscaling: lapse rate = 6.5 degC km-1
-dem_hr       <- rast("GIS South/dem_patagonia3f.tif")
+writeCDF(pp_stack, "Data/Precipitation/PP_ERA5_hr_1980_2020d.nc",  overwrite=TRUE, 
+         varname="pp", unit="mm", zname="time", prec = "float",  shuffle = T)
+
+writeCDF(pp_stack_m, "Data/Precipitation/PP_ERA5_hr_1980_2020m.nc",  overwrite=TRUE, 
+         varname="pp", unit="mm", zname="time", compression = 9, prec = "float")
+
+writeRaster(pp_stack_y, "Data/Precipitation/PP_ERA5_hr_1980_2020.tif", overwrite=TRUE)
+
+# Maximum temperature downscaling: lapse rate = 6.5 degC km-1
+tmax_stack <- rast("Data/Temperature/Tmax_ERA5_1959_2021d.nc")
+tmax_stack <- subset(tmax_stack, which(time(tmax_stack) >= period[1] & time(tmax_stack)  <= period[2]))
+
+dem_hr <- rast("GIS South/dem_patagonia3f.tif")
 dem_hr <- resample(dem_hr,    sample,    method="bilinear")
-dem_lr <- resample(dem_hr,    t2m_stack, method="bilinear")
-dem_lr <- resample(dem_lr,    dem_hr,    method="bilinear")
-factor <- (dem_lr-dem_hr)*0.0065
+dem_lr <- resample(dem_hr,    tmax_stack, method="bilinear")
+dem_lr <- resample(dem_lr,    dem_hr,    method="near")
+factor <- round((dem_lr-dem_hr)*0.0065,2)
 factor[is.na(factor)] <- 0
 
-t2m_stack_hr <-resample(t2m_stack, dem_hr, method="near")
-t2m_stack_hr <-t2m_stack_hr+factor
-t2m_stack_hr <-round(t2m_stack_hr, 2)
+tmax_stack <- resample(tmax_stack, dem_hr, method="near")
+tmax_stack <- tmax_stack * is.finite(dem)
+tmax_stack <- tmax_stack + factor
 
-t2m_stack_hr_m <- mean(tapp(t2m_stack_hr, strftime(time(t2m_stack_hr),format="%Y"), fun = mean, na.rm = TRUE)) # mean annual value
+tmax_stack_m <- tapp(tmax_stack, strftime(time(tmax_stack),format="%Y"), fun = mean, na.rm = TRUE)
+tmax_stack_m <- mean(tmax_stack_m) # mean annual value
+writeRaster(tmax_stack_m, "Data/Temperature/Tmax_ERA5_hr_1980_2020.tif", overwrite=TRUE)
 
-writeCDF(t2m_stack_hr, "Data/Temperature/T2M_ERA5_hr_1990_2019m.nc",  overwrite=TRUE, varname="t2m", unit="degC", longname="Temperature", zname="time", compression = 9)
-writeRaster(t2m_stack_hr_m, "Data/Temperature/T2M_ERA5_hr_1990_2019m.tif", overwrite=TRUE)
+writeCDF(tmax_stack, "Data/Temperature/Tmax_ERA5_hr_1980_2020d.nc",  overwrite=TRUE, 
+         varname="tmax", unit="degC", longname="Temperature", zname="time", prec = "float", shuffle = T)
 
-#Alternative for temperature: best lapse rate according to observations
-t2m_shape <- read.csv("Data/Temperature/Metadata_Temperature_v10.csv")
-t2m_shape <- vect(t2m_shape, geom=c("Longitude", "Latitude"), crs="epsg:4326")
-t2m_obs   <- read.csv("Data/Temperature/Data_Temperature_mean_v10_monthly.csv")
-t2m_obs$Date<-as.Date(t2m_obs$Date) #The date is the first column
+# Minimum temperature downscaling: lapse rate = 6.5 degC km-1
+tmin_stack <- rast("Data/Temperature/Tmin_ERA5_1959_2021d.nc")
+tmin_stack <- subset(tmin_stack, which(time(tmin_stack) >= period[1] & time(tmin_stack)  <= period[2]))
 
-best_lapse_rate <- function(lr) {
-  
-  t2m_stack_hr<-resample(t2m_stack, dem_hr, method="near")
-  factor      <-(dem_lr-dem_hr)*lr
-  t2m_stack_hr<-t2m_stack_hr+factor
-  
-  t2m_sim_hr<-as.data.frame(t(extract(t2m_stack_hr,t2m_shape, method='simple')))
-  best_lapse_rate<-sum((hydroGOF::me(sim=t2m_sim_hr, obs=t2m_obs, na.rm=TRUE))^2)
-  
-}
+dem_hr <- rast("GIS South/dem_patagonia3f.tif")
+dem_hr <- resample(dem_hr,    sample,    method="bilinear")
+dem_lr <- resample(dem_hr,    tmin_stack, method="bilinear")
+dem_lr <- resample(dem_lr,    dem_hr,    method="near")
+factor <- round((dem_lr-dem_hr)*0.0065,2)
+factor[is.na(factor)] <- 0
 
-best_lr<-optim(0.0065, best_lapse_rate)
+tmin_stack <- resample(tmin_stack, dem_hr, method="near")
+tmin_stack <- tmin_stack * is.finite(dem)
+tmin_stack <- tmin_stack + factor
 
+tmin_stack_m <- tapp(tmin_stack, strftime(time(tmin_stack),format="%Y"), fun = mean, na.rm = TRUE)
+tmin_stack_m <- mean(tmin_stack_m) # mean annual value
+writeRaster(tmin_stack_m, "Data/Temperature/Tmin_ERA5_hr_1980_2020.tif", overwrite=TRUE)
+
+writeCDF(tmin_stack, "Data/Temperature/Tmin_ERA5_hr_1980_2020d.nc",  overwrite=TRUE, 
+         varname="tmin", unit="degC", longname="Temperature", zname="time", prec = "float", shuffle = T)
