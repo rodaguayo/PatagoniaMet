@@ -1,4 +1,4 @@
-# Code for precipitation bias correction
+# Code for precipitation bias correction ---------------------------------------------------------
 # Developed by Rodrigo Aguayo (2020-2022)
 
 rm(list=ls())
@@ -8,138 +8,154 @@ library("stats")
 library("qmap")
 library("terra")
 library("hydroGOF")
+library("exactextractr")
+library("randomForest")
 
 setwd("/home/rooda/Dropbox/Patagonia/")
+terraOptions(memfrac=0.90)
+terraOptions(verbose=T)
+set.seed(123)
 
-# Data: observations and gridded product
-pp_stack_hr<-rast("Data/Precipitation/PP_ERA5_hr_1990_2019m.nc")
+# 1. Data: observations and gridded product -------------------------------------------------------
+pp_stack_hr <- rast("Data/Precipitation/PP_ERA5_hr_1980_2020d.nc") # Gridded data
+period <- c(time(pp_stack_hr)[1], max(time(pp_stack_hr)))
 names(pp_stack_hr)<-time(pp_stack_hr)
-period <- c(min(time(pp_stack_hr))-86400, max(time(pp_stack_hr))+86400)
 
-pp_shape <- read.csv("Data/Precipitation/Metadata_Precipitation_v10.csv")
+pp_shape <- read.csv("Data/Precipitation/Metadata_Precipitation_v10.csv") # Ground-base data
 pp_shape <- vect(pp_shape, geom=c("Longitude", "Latitude"), crs="epsg:4326")
-pp_obs   <- read.csv("Data/Precipitation/Data_Precipitation_v10_monthly.csv")
-pp_obs$Date<-as.POSIXct(pp_obs$Date) #The date is the first column
+pp_shape <- crop(pp_shape, pp_stack_hr)
+pp_obs   <- read.csv("Data/Precipitation/Data_Precipitation_v10_daily.csv")
+pp_obs$Date <- as.Date(pp_obs$Date) #The date is the first column
 pp_obs   <- subset(pp_obs, Date >= period[1] & Date <= period[2])
+pp_obs   <- pp_obs[pp_shape$ID]
 pp_sim   <- as.data.frame(t(extract(pp_stack_hr, pp_shape, method='simple')))[-1,]
-pp_obs$Date <- NULL
+print ("1. Data: Ok")
 
-QM_parameters<-data.frame(matrix(0,length(pp_shape),4), row.names = names(pp_obs))
-colnames(QM_parameters)<-c("a_power","b_power","a_linear","b_linear") 
-KGE<-data.frame(matrix(0,length(pp_shape),3*4),  row.names = names(pp_obs)) # for small verification
+# 2. Parametric Quantile mapping ------------------------------------------------------------------
+QM_parameters <- data.frame(matrix(0,length(pp_shape),4), row.names = names(pp_obs))
+colnames(QM_parameters)<-c("a_linear","b_linear", "KGE_initial", "KGE_linear") 
 
 for (i in 1:length(pp_shape)) {
-  fit_ptf_power      <- fitQmapPTF(pp_obs[,i], pp_sim[,i], transfun="power",        wet.day=0, cost="RSS")
-  fit_ptf_linear     <- fitQmapPTF(pp_obs[,i], pp_sim[,i], transfun="linear",       wet.day=0, cost="RSS")
+  fit_ptf_linear  <- fitQmapPTF(pp_obs[,i], pp_sim[,i], transfun="linear",  wet.day=0, cost="RSS")
+  pp_ptf_linear  <- doQmapPTF(pp_sim[,i], fit_ptf_linear)
+  
+  QM_parameters[i,1:2] <- fit_ptf_linear$par
+  QM_parameters[i,3:4] <- c(KGE(sim = pp_sim[,i],    obs=pp_obs[,i], method="2012" ,na.rm=TRUE), 
+                            KGE(sim = pp_ptf_linear, obs=pp_obs[,i], method="2012", na.rm=TRUE))
+  }
+print ("2. PQM parameters: Ok")
 
-  QM_parameters[i,]<-c(fit_ptf_power$par, fit_ptf_linear$par)
+dem <- rast("GIS South/dem_patagonia005.tif")
+covariates <- c(rast("GIS South/clouds_005.tif"),                     # Cloud cover (%)
+                rast("GIS South/climate_class005.tif"),               # Climate class (discrete)
+                rast("GIS South/dist_coast005l.tif"),                 # Distance to coast (log m)
+                rast("GIS South/dem_patagonia005.tif"),               # Altitude (masl)
+                rast("Data/Temperature/T2M_ERA5_hr_1980_2020.tif"),   # Annual T2M (degC)
+                rast("Data/Precipitation/PP_ERA5_hr_1980_2020.tif"))  # Annual PP (mm)
+names(covariates) <- c("cloud_cover", "climate_class", "distance_coast", "elevation", "t2m", "pp")
 
-  KGE[i,] <- c(unlist(KGE(sim=pp_sim[,i],                           obs=pp_obs[,i], method="2012", out.type="full",na.rm=TRUE)),
-               unlist(KGE(sim=doQmapPTF(pp_sim[,i], fit_ptf_power), obs=pp_obs[,i], method="2012", out.type="full",na.rm=TRUE)),
-               unlist(KGE(sim=doQmapPTF(pp_sim[,i],fit_ptf_linear), obs=pp_obs[,i], method="2012", out.type="full",na.rm=TRUE)))
-  print(i)
-}
+## 2.1. a linear parameter (a + pp * b) -----------------------------------------------------------
+model_values <- data.frame(extract(covariates, pp_shape), a_linear = QM_parameters$a_linear)[,-1]
+model_values$climate_class <- as.factor(model_values$climate_class)
+rf_model     <- randomForest(a_linear ~., data = model_values, ntree = 2000)
+a_linear     <- predict(covariates, rf_model, type='response')
+a_linear     <- focal(a_linear, w = focalMat(a_linear, 0.04, "Gauss"), pad = TRUE)
 
-# Second stage: Random forest predictors
-covariates     <- c(rast("GIS South/west_gradient005.tif"),
-                    rast("GIS South/clouds_005.tif"),
-                    rast("GIS South/aspect_dem005.tif"),
-                    rast("GIS South/climate_class005.tif"),
-                    rast("GIS South/dist_coast005l.tif"),
-                    rast("GIS South/dem_patagonia005.tif"),
-                    rast("Data/Temperature/T2M_ERA5_hr_1990_2019m.tif"),
-                    rast("Data/Precipitation/PP_ERA5_hr_1990_2019m.tif"))
-names(covariates)<-c("west_gradient", "cloud_cover", "aspect", "climate_class", "distance_coast", "elevation", "mean_t2m", "mean_pp")
+## 2.2. b linear parameter (a + pp *b) ------------------------------------------------------------
+model_values <- data.frame(extract(covariates, pp_shape), b_linear = QM_parameters$b_linear)[,-1]
+model_values$climate_class <- as.factor(model_values$climate_class)
+rf_model     <- randomForest(b_linear ~., data = model_values, ntree = 2000)
+b_linear     <- predict(covariates, rf_model, type='response')
+b_linear     <- focal(b_linear, w = focalMat(b_linear, 0.04, "Gauss"), pad = TRUE)
+print ("2.2. a and b linear parameters: Ok")
 
-model_mean <- pa ~ west_gradient + cloud_cover + aspect + climate_class + distance_coast + elevation + mean_t2m + mean_pp
+## 2.3. PQM correction for PMET -------------------------------------------------------------------
+a_linear[covariates$elevation <= 1] <- NA
+b_linear[covariates$elevation <= 1] <- NA
 
-#Third stage: Distributed bias correction: Parametric quantile mapping 
-dem <- covariates[[6]]
+pp_stack_hr <- a_linear + pp_stack_hr * b_linear
+pp_stack_hr <- classify(pp_stack_hr, cbind(-Inf, 0, 0), right=FALSE)
 
+terra::time(pp_stack_hr) <- seq(from = period[1], to= period[2], by = "day")
+pp_stack_hr_m <- tapp(pp_stack_hr, strftime(time(pp_stack_hr),format="%Y"), fun = sum, na.rm = TRUE)
+pp_stack_hr_m <- mean(pp_stack_hr_m)
+print ("2.3. PQM applied to original netcdf: Ok")
 
-dem[dem <= 1] <- NA
-pp_era5 <- mask(pp_era5, dem)
+# 3. Precipitation factors ------------------------------------------------------------------------
 
+## 3.1 w factor for Budyko framework --------------------------------------------------------------
+basin_data        <- read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
+basin_data$PET_PP <- basin_data$PET_BH/basin_data$PP_BH
+basin_data$ET_PP  <- basin_data$ET_BH/basin_data$PP_BH
+basin_data$w      <- rep(NA, nrow(basin_data))
 
-b_linear[b_linear == 0] <- NA
+w_function <- function(PET_PP, ET_PP, w) 1 + PET_PP - ET_PP - (1+((PET_PP)^w))^(1/w)
 
-gf <- focalWeight(pp_era5, 0.04, "Gauss")
-a_linear <- mask(focal(a_linear, w=gf, pad = TRUE), dem)
-b_linear <- mask(focal(b_linear, w=gf, pad = TRUE), dem)
+for (basin in 1:nrow(basin_data)) { 
+  if (!is.na(basin_data$PET_PP[basin])) { # Only basins with data in Chile (79 of 83)
+    basin_data$w[basin] <- uniroot(w_function, interval=c(1, 5), tol = 0.001, 
+                                   PET_PP=basin_data$PET_PP[basin], 
+                                   ET_PP=basin_data$ET_PP[basin])$root
+    }
+  }
+print ("3.1 w factors: Ok")
 
-pp_era5_v2=a_linear+pp_era5*b_linear
-pp_era5_v2[pp_era5_v2 < 0] <- 0
+## 3.2 long-term precipitation  -------------------------------------------------------------------
+pp_function <- function(PP, R, PET, w) 1 + PET/PP - ((PP-R)/PP) - (1+((PET/PP)^w))^(1/w)
+basin_data$PP_TRUE <- rep(NA, nrow(basin_data))
 
-p_era5_v2_mean<-mean(stackApply(pp_era5_v2, indices<-format(pp_era5_v2@z$time,"%y"), fun=sum))
-
-# writeCDF(pp_stack_hr, "Data/Precipitation/PP_PMET_1990_2019m.nc",  overwrite=TRUE, varname="pp", unit="mm", longname="Precipitation", zname="time", compression = 9)
-# writeRaster(pp_stack_hr_m, "Data/Precipitation/PP_PMET_1990_2019m.tif", overwrite=TRUE)
-
-
-#Estimation of "w" from National Water Balance
-basins <- vect("C:/Users/rooda/Dropbox/Patagonia/GIS South/Basins_Patagonia83.shp")
-
-q_bh   <- read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "budyko")
-q_data <- read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "info")
-PET_PP <- as.numeric(q_bh$`PET/PP`)
-ET_PP  <- as.numeric(q_bh$`ET/PP`)
-Ri     <- as.numeric(q_data$R_int_mm_year)
-PETi   <- as.numeric(q_data$pet_gleam)
-
-w_inf <- function(PET_PP, ET_PP, w) 1 + PET_PP - ET_PP - (1+((PET_PP)^w))^(1/w)
-vec_w <- numeric(0)
-
-#Only basins in Chile (79 of 83)
-for (j in 1:length(q_bh$Name)) {
-  vec_w[j] <- uniroot(w_inf, interval=c(0, 10), tol = 0.001, PET_PP=PET_PP[j], ET_PP=ET_PP[j])$root
-}
-write.csv(vec_w, "w_estimation.csv")
-
-
-#Estimation of long-term "real" precipitation
-pp_inf <- function(PP, R, PET, w) 1 + PET/PP - ((PP-R)/PP) - (1+((PET/PP)^w))^(1/w)
-w      <- round(median(vec_w),1)
-vec_pp <- numeric(0)
-
-for (j in 1:length(basins)) {
-  if (is.na(Ri[j])){
-    vec_pp[j]<-NA
-    print(j)
-    
-  } else {
-    pp <- uniroot(pp_inf, interval=c(10, 15000), tol = 0.000001, R=Ri[j], PET=PETi[j], w=w)
-    vec_pp[j] <- pp$root
-    print(j)
+for (basin in 1:nrow(basin_data)) {
+  if (!is.na(basin_data$R_int_mm_year[basin])){ 
+    basin_data$PP_TRUE[basin] <- uniroot(pp_function, interval=c(10, 15000), tol = 0.000001, 
+                                         R   = basin_data$Qint_mm_y[basin], 
+                                         PET = basin_data$PET_PMET[basin], 
+                                         w   = median(basin_data$w, na.rm = T))$root 
   }
 }
+print ("3.2 long-term precipitation: Ok")
 
-write.csv(round(vec_pp,1), "C:/Users/rooda/Dropbox/Rstudio/PP_REAL_1990_2019.csv")
+## 3.3 PP factor for each basin centroid ----------------------------------------------------------
+basins_shp     <- vect("GIS South/Basins_Patagonia83.shp")
+basins_shp     <- basins_shp[order(basins_shp$gridcode), ]
+basin_data$pp_pmet_int <- extract(pp_stack_hr_m, basins_shp, fun = "mean", weights=TRUE, na.rm = T)[,2]
+basin_data$BF_PMET <- round(basin_data$true_pp/basin_data$pp_pmet_int,3)
+basin_data$BF_PMET[basin_data$Use == 0] <- NA
+basins_shp     <- subset(basins_shp, basin_data$Use == 1)
+basins_shp     <- centroids(basins_shp)
+print ("3.3 PP factors: Ok")
 
+## 3.4 random forest for PP factors ---------------------------------------------------------------
+covariates <- c(rast("GIS South/west_gradient005.tif"),               # West gradient (m/m)
+                rast("GIS South/aspect_dem005.tif"),                  # Aspect (deg)
+                rast("GIS South/dist_coast005l.tif"),                 # Distance to coast (log m)
+                rast("GIS South/dem_patagonia005.tif"),               # Altitude (masl)
+                rast("Data/Temperature/T2M_ERA5_hr_1980_2020.tif"),   # Annual T2M (degC)
+                rast("Data/Precipitation/PP_ERA5_hr_1980_2020.tif"))  # Annual PP (mm)
+names(covariates) <- c("west_gradient", "aspect", "distance_coast", "elevation", "t2m", "pp")
 
-
-
-
-
-
-
-
-
-#Third stage: Budyko correction
-pp_pmet<- stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_PMET_1990_2019_v1.nc", varname = "PP")
-bias_factor<-resample(raster("C:/Users/rooda/Dropbox/Patagonia/GIS South/bias_factor005.tif"), pp_pmet)
-bias_factor[bias_factor == 0] <- NA
-
-bias_factor <- focal(bias_factor, w=focalWeight(bias_factor, 0.04, "Gauss"))
+model_values <- data.frame(extract(covariates, basins_shp), bias_factor = basins_shp$BF)[,-1]
+model_values <- model_values[-nrow(model_values),]
+rf_model     <- randomForest(bias_factor ~., data = model_values, ntree = 2000)
+bias_factor     <- predict(covariates, rf_model, type='response')
+bias_factor     <- focal(bias_factor, w = focalMat(a_linear, 0.04, "Gauss"), pad = TRUE)
 bias_factor[bias_factor <= 1] <- 1
-bias_factor<-mask(bias_factor,pp_patagoniamet[[1]])
 
-pp_pmet_v2<-pp_pmet*bias_factor
-pp_pmet_v2<-setZ(pp_pmet_v2,seq(as.Date("1990/1/1"), as.Date("2019/12/1"), "month"))
+pp_pmet   <- pp_stack_hr*bias_factor
+pp_pmet   <- round(pp_pmet, 0)
+pp_pmet   <- pp_pmet*1 #trick to load into disk 
+print ("3.4 RG regression: Ok")
 
-pp_pmet_v2_mean<-mean(stackApply(pp_pmet_v2, indices<-format(pp_pmet_v2@z$time,"%y"), fun=sum))
-pp_pmet_v2_mean[pp_pmet_v2_mean == 0] <- NA
+# 4. Saving and resampling files ------------------------------------------------------------------
+pp_pmet_m <- tapp(pp_pmet,   strftime(time(pp_pmet), format="%Y-%m"), fun = sum, na.rm = TRUE)
+terra::time(pp_pmet_m) <- seq(from = period[1], to = period[2], by = "month")
+pp_pmet_y <- tapp(pp_pmet_m, strftime(time(pp_pmet_m), format="%Y"),  fun = sum, na.rm = TRUE)
+pp_pmet_y <- mean(pp_pmet_y)
 
-writeRaster(pp_pmet_v2, "PP_PMET_1990_2019_v2.nc", format = "CDF", overwrite=TRUE, varname="PP", 
-            varunit="mm", longname="precipitation", xname="X", yname="Y", zname="time", zunit="month")
-writeRaster(pp_pmet_v2_mean, "PP_PMET_1990-2019_mean_v2.tif", format = "GTiff", overwrite = TRUE)
+writeCDF(pp_pmet, "Data/Precipitation/PP_PMET_1980_2020d.nc",  overwrite=TRUE, 
+         varname="pp", unit="mm", zname="time", prec = "float",  shuffle = T)
 
+writeCDF(pp_pmet_m, "Data/Precipitation/PP_PMET_1980_2020m.nc",  overwrite=TRUE, 
+         varname="pp", unit="mm", zname="time", compression = 9, prec = "float")
+
+writeRaster(pp_pmet_y, "Data/Precipitation/PP_PMET_1980_2020.tif", overwrite=TRUE)
+print (paste0("4. pp files: Ok"))
