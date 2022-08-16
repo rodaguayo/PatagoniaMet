@@ -11,9 +11,10 @@ setwd("/home/rooda/Dropbox/Patagonia/Data/")
 lake_daily   <- read.csv("Lake Levels/Data_Lakes_Levels_v10_daily.csv")
 lake_daily_c <- read.csv("Lake Levels/Data_Lakes_Levels_v10_daily.csv")
 
+Date <-seq(from = as.Date(min(lake_daily$Date)), to = as.Date(max(lake_daily$Date)), by = "month")
 lake_daily_c[,2:length(lake_daily)][lake_daily_c[,2:length(lake_daily)]>-99 ]<- 1
-lake_monthly_c <- daily2monthly(lake_daily_c, FUN = sum,  na.rm = TRUE)
-lake_monthly   <- daily2monthly(lake_daily,   FUN = mean, na.rm = TRUE)
+lake_monthly_c <- data.frame(daily2monthly(lake_daily_c, FUN = sum,  na.rm = TRUE))
+lake_monthly   <- data.frame(daily2monthly(lake_daily,   FUN = mean, na.rm = TRUE))
 lake_monthly[lake_monthly_c < 20]<-NA
 lake_monthly<-round(lake_monthly,2)
 write.csv(lake_monthly, "Lake Levels/Data_Lakes_Levels_v10_monthly.csv")
@@ -38,19 +39,20 @@ streamflow_annual    <- data.frame(monthly2annual(streamflow_monthly,   FUN = me
 streamflow_annual   <- round(streamflow_annual, 2)
 streamflow_annual[streamflow_annual_c < 10] <- NA
 streamflow_annual   <- cbind(Date, streamflow_annual)
-write.csv(pp_annual, "Streamflow/Data_Streamflow_v10_annual.csv")
+write.csv(streamflow_annual, "Streamflow/Data_Streamflow_v10_annual.csv", row.names = F)
 
 ## Precipitation data: Daily to monthly (> 20 days) and annual (> 10 months) time step 
 pp_daily   <-read.csv("Precipitation/Data_precipitation_v10_daily.csv")
 pp_daily_c <-read.csv("Precipitation/Data_precipitation_v10_daily.csv")
 
 pp_daily_c[,2:length(pp_daily)][pp_daily_c[,2:length(pp_daily)]>-99 ]<- 1
-pp_monthly_c <- daily2monthly(pp_daily_c, FUN = sum, na.rm = TRUE)
-pp_monthly   <- daily2monthly(pp_daily, FUN = sum, na.rm = TRUE)
+pp_monthly_c <- data.frame(daily2monthly(pp_daily_c, FUN = sum, na.rm = TRUE))
+pp_monthly   <- data.frame(daily2monthly(pp_daily, FUN = sum, na.rm = TRUE))
 pp_monthly[pp_monthly_c < 20] <- NA
 write.csv(pp_monthly, "Precipitation/Data_precipitation_v10_monthly.csv")
 
 pp_monthly_c<-pp_monthly
+Date <-seq(from = as.Date(min(pp_daily$Date)), to = as.Date(max(pp_daily$Date)), by = "month")
 pp_monthly_c[,2:length(pp_monthly)][pp_monthly_c[,2:length(pp_monthly)]>-99 ]<- 1
 pp_annual_c  <- data.frame(monthly2annual(pp_monthly_c, FUN = sum, na.rm = TRUE))
 pp_annual    <- data.frame(monthly2annual(pp_monthly, FUN = sum, na.rm = TRUE))
@@ -66,9 +68,10 @@ t2m_daily <- cbind(t2m_daily_max$Date, t2m_daily)
 write.csv(t2m_daily, "Temperature/Data_Temperature_mean_v10_daily.csv")
 
 t2m_daily_c <-t2m_daily
+Date <-seq(from = as.Date(min(t2m_daily$Date)), to = as.Date(max(t2m_daily$Date)), by = "month")
 t2m_daily_c[,2:length(t2m_daily)][t2m_daily_c[,2:length(t2m_daily)]>-99 ]<- 1
-t2m_monthly_c  <-daily2monthly(t2m_daily_c, FUN = sum,  na.rm = TRUE)
-t2m_monthly    <-daily2monthly(t2m_daily,   FUN = mean, na.rm = TRUE)
+t2m_monthly_c  <- data.frame(daily2monthly(t2m_daily_c, FUN = sum,  na.rm = TRUE))
+t2m_monthly    <- data.frame(daily2monthly(t2m_daily,   FUN = mean, na.rm = TRUE))
 t2m_monthly[t2m_monthly_c < 20]<-NA
 t2m_monthly<-round(t2m_monthly,2)
 write.csv(t2m_monthly, "Temperature/Data_Temperature_mean_v10_monthly.csv")
@@ -86,9 +89,10 @@ write.csv(t2m_annual, "Temperature/Data_temperature_mean_v10_annual.csv")
 pet_daily   <-read.csv("Evapotranspiration/Data_Evapotranspiration_v10_daily.csv")
 pet_daily_c <-read.csv("Evapotranspiration/Data_Evapotranspiration_v10_daily.csv")
 
+Date <-seq(from = as.Date(min(pet_daily$Date)), to = as.Date(max(pet_daily$Date)), by = "month")
 pet_daily_c[,2:length(pet_daily)][pet_daily_c[,2:length(pet_daily)]>-99 ]<- 1
-pet_monthly_c<-daily2monthly(pet_daily_c, FUN = sum, na.rm = TRUE)
-pet_monthly<-daily2monthly(pet_daily, FUN = sum, na.rm = TRUE)
+pet_monthly_c <- data.frame(daily2monthly(pet_daily_c, FUN = sum, na.rm = TRUE))
+pet_monthly   <- data.frame(daily2monthly(pet_daily,   FUN = sum, na.rm = TRUE))
 pet_monthly[pet_monthly_c < 20]<-NA
 pet_monthly<-round(pet_monthly,1)
 write.csv(pet_monthly, "Evapotranspiration/Data_Evapotranspiration_v10_monthly.csv")
