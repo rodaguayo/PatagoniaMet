@@ -6,30 +6,24 @@ cat("\014")
 
 library("hydroGOF")
 library("raster")
-library("readxl")
 
-setwd("/home/rooda/Dropbox/Patagonia/")
+setwd("/home/rooda/Dropbox/Patagonia/Data/Evapotranspiration/")
+period     <- c(as.POSIXct("1980-01-01"), as.POSIXct("2020-12-31"))
+attributes <- c("N", "ID", "Institution", "Latitude", "Longitude", "Altitude")
 
 #Observations (location and data)
-pet_shape <- read.csv("Data/Evapotranspiration/Metadata_Evapotranspiration_v10.csv")
-pet_shape <- vect(pet_shape, geom=c("Longitude", "Latitude"), crs="epsg:4326")
-pet_obs   <- read.csv("Data/Evapotranspiration/Data_Evapotranspiration_v10_monthly.csv")
-pet_obs$Date<-as.Date(pet_obs$Date) #The date is the first column
+pet_validation  <- read.csv("Metadata_Evapotranspiration_v10.csv")
+pet_shape       <- vect(pet_validation, geom=c("Longitude", "Latitude"), crs="epsg:4326")
+pet_obs         <- read.csv("Data_Evapotranspiration_v10_monthly.csv")
+pet_obs$Date    <-as.POSIXct(pet_obs$Date, tz= "UTC") #The date is the first column
+pet_validation  <- subset(pet_validation, select = attributes)
 
-# GLEAM v3.5a
-pet_gleam <- rast("Data/Evapotranspiration/PET_GLEAM_1990_2019.nc")
-pet_gleam <- pet_gleam[[which(time(pet_gleam) >= as.Date("2009-12-31"))]]
-pet_gleam <-setNames(pet_gleam, seq(as.Date("2010/1/1"), as.Date("2019/12/31"), "month"))
-pet_gleam <-as.data.frame(t(extract(pet_gleam, pet_shape, method='simple')))
-colnames(pet_gleam) <- pet_shape$Name
+pet_stack <- rast("PET_GLEAM_1980_2021m.nc") #GLEAM data for 1990-2019
+pet_stack <- subset(pet_stack,  which(time(pet_stack)  >= period[1] & time(pet_stack)   <= period[2]))
+pet_sim   <- as.data.frame(t(extract(pet_stack, pet_shape, method='simple'))[-1,])
+index     <- KGE(sim=pet_sim, obs=pet_obs[,-1], method="2009", out.type="full",na.rm=TRUE)
+index     <- data.frame(t(index$KGE.elements), KGE = index$KGE.value, ME = me(sim=pet_sim, obs=pet_obs[,-1], na.rm=TRUE))
+colnames(index) <- paste0("GLEAM_", colnames(index))
+pet_validation  <- cbind(pet_validation, index)
 
-#Performance
-pet_obs_subset<-subset(pet_obs, Date <= max(as.Date(rownames(pet_gleam), format =  "X%Y.%m.%d")))[,-1]
-
-KGE_pet_gleam<-KGE(sim=pet_gleam, obs=pet_obs_subset, method="2012", out.type="full",na.rm=TRUE)
-ME_pet_gleam<-me(sim=pet_gleam, obs=pet_obs_subset, na.rm=TRUE)
-rSD_pet_gleam<-rSD(sim=pet_gleam, obs=pet_obs_subset, na.rm=TRUE)
-
-#Save
-pet_validation<-cbind(t(KGE_pet_gleam$KGE.elements),KGE_pet_gleam$KGE.value, ME_pet_gleam, rSD_pet_gleam)
-write.csv(pet_validation,"C:/Users/rooda/Dropbox/Rstudio/PET_Validation.csv")
+write.csv(pet_validation,"PET_Validation.csv")
