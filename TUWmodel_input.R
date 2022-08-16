@@ -1,112 +1,103 @@
+# TUWmodel inputs: precipitation, air temperature and potential evapotranspiration
+# Developed by Rodrigo Aguayo (2020-2022)
+
 rm(list=ls())
 cat("\014")  
 
-library("TUWmodel")
-library("readxl")
-library("raster")
+source("elevationZones.R")
+library("exactextractr")
+library("terra")
+library("sf")
 
-dem_patagonia<-raster("C:/Users/rooda/Dropbox/ArcGIS/Chile/dem_patagonia1.tif")
-q_data<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "data_monthly"))
+terra::gdalCache(17000)
+setwd("/home/rooda/Dropbox/Patagonia/")
+period  <- c(as.POSIXct("1980-01-01", tz = "UTC"), as.POSIXct("2019-12-31", tz = "UTC"))
 
-basins_int<-shapefile("C:/Users/rooda/Dropbox/Patagonia/GIS South/Basins_Patagonia83d.shp")
-basins_int<-spTransform(basins_int, crs(dem_patagonia))
-basins_int<-basins_int[order(as.numeric(basins_int$gridcode)),]
+dem <- rast("GIS South/dem_patagonia3f.tif")
+dem <- aggregate(dem, fact=6, fun="mean")
+dem <- disagg(dem, fact=2, method = "bilinear") # avoid bug in elevation bands
 
-#PatagoniaMet v1.0, CR2MET v2.0, MSWEP 2.8 and ERA5d
-pp_pmet<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_PMET_1990_2019_v2.nc", varname = "PP")
-t2m_pmet<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_PMET_1990_2019.nc", varname = "tas")
-pet_gleam<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/PET_GLEAM_1990_2019.nc", varname = "pet")
+q_data  <- read.csv("Data/Streamflow/Data_Streamflow_v10_daily.csv")
 
-pp_cr2met<-stack("E:/Datasets/CR2MET/PP_CR2MET_1979_2019.nc", varname = "Precipitation")
-pp_cr2met<- setZ(pp_cr2met, seq(as.Date('1979-01-01'), as.Date('2019-12-01'), by = 'month'))
-pp_cr2met<-subset(pp_cr2met, which(getZ(pp_cr2met) >= '1990-01-01'))
-t2m_cr2met<-stack("E:/Datasets/CR2MET/T2M_CR2MET_1979_2019.nc", varname = "Temperature")
-t2m_cr2met<- setZ(t2m_cr2met, seq(as.Date('1979-01-01'), as.Date('2019-12-01'), by = 'month'))
-t2m_cr2met<-subset(t2m_cr2met, which(getZ(t2m_cr2met) >= '1990-01-01'))
+basins_int <- vect("GIS South/Basins_Patagonia83d.shp")
+basins_int <- project(basins_int, crs(dem))
+basins_int <- basins_int[order(as.numeric(basins_int$gridcode)),]
 
-pp_mswep<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_MSWEP_1979_2019.nc", varname = "Precipitation")
-pp_mswep<- setZ(pp_mswep, seq(as.Date('1979-02-01'), as.Date('2019-12-01'), by = 'month'))
-pp_mswep<-subset(pp_mswep, which(getZ(pp_mswep) >= '1990-01-01'))
+# PP and T2M: PMET v1.0; PET: GLEAM v3.6
+pp_pmet    <- rast("Data/Precipitation/PP_PMET_1980_2020d.nc")
+t2m_pmet   <- rast("Data/Temperature/Tavg_PMET_1980_2020d.nc")
+pet_gleam  <- rast("Data/Evapotranspiration/PET_GLEAM36a_1980_2021d.nc")
+time(pp_pmet)   <- as.POSIXct(time(pp_pmet))
+time(t2m_pmet)  <- as.POSIXct(time(t2m_pmet))
+time(pet_gleam) <- as.POSIXct(time(pet_gleam))
+pp_pmet   <- pp_pmet[[time(pp_pmet)  >= period[1] & time(pp_pmet)  <= period[2]]]
+t2m_pmet  <- t2m_pmet[[time(t2m_pmet)  >= period[1] & time(t2m_pmet)  <= period[2]]]
+pet_gleam <- pet_gleam[[time(pet_gleam)  >= period[1] & time(pet_gleam)  <= period[2]]]
 
-pp_era5d<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_ERA5_1990_2019.nc", varname = "tp")
-t2m_era5d<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/T2M_ERA5_1990_2019_v1.nc", varname = "tas")
+# PP and T2M: CR2MET v2.0; PET: GLEAM v3.6
+pp_cr2met  <- rast("Data/Precipitation/PP_CR2MET_1979_2020d.nc")
+t2m_cr2met <- rast("Data/Temperature/Tavg_CR2MET_1979_2020d.nc")
+pp_cr2met  <- pp_cr2met[[time(pp_cr2met)  >= period[1] & time(pp_cr2met)  <= period[2]]]
+t2m_cr2met <- t2m_cr2met[[time(t2m_cr2met)  >= period[1] & time(t2m_cr2met)  <= period[2]]]
 
-data_area<-matrix(0,length(basins_int),7)
-data_area[,1]<-as.data.frame(read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/streamflow/Data_streamflow_v10.xlsx", sheet = "info"))$total_area
+# PP: MSWEP v2.8; T2M: CR2MET v2.0; PET: GLEAM v3.6
+pp_mswep   <- rast("Data/Precipitation/PP_MSWEPv28_1979_2020d.nc")
+time(pp_mswep) <- as.POSIXct(time(pp_mswep))
+pp_mswep  <- pp_mswep[[time(pp_mswep)  >= period[1] & time(pp_mswep)  <= period[2]]]
+
+# PP and T2M: ERA5d; PET: GLEAM v3.6
+pp_era5d   <- rast("Data/Precipitation/PP_ERA5_hr_1980_2020d.nc")
+t2m_era5d  <- rast("Data/Temperature/Tavg_ERA5_hr_1980_2020d.nc")
+time(pp_era5d)  <- as.POSIXct(time(pp_era5d))
+time(t2m_era5d) <- as.POSIXct(time(t2m_era5d))
+pp_era5d   <- pp_era5d[[time(pp_era5d)  >= period[1] & time(pp_era5d)  <= period[2]]]
+t2m_era5d  <- t2m_era5d[[time(t2m_era5d)  >= period[1] & time(t2m_era5d)  <= period[2]]]
+
+data_area <- data.frame(matrix(0, length(basins_int), 7), row.names = names(basins_int$gridcode))
+colnames(data_area)<-c("area", "nbands",	"n1",	"n2",	"n3",	"n4",	"n5")
 
 for (i in 1:length(basins_int)) {
-  q_data_i<-subset(q_data, Date > "1991-12-31" & Date < "2005-12-31")[,i+1]
+  q_data_i <- subset(q_data, Date > period[1] & Date < period[2])[,i+1]
   
-  if (sum(!is.na(q_data_i))/length(q_data_i) >= 2/3 & basins_int$Use[i] == 1){
+  if (sum(!is.na(q_data_i))/length(q_data_i) >= 0.5 & basins_int$Use[i] == 1){
     
-    elev_zones_i<-elevationZones(x=basins_int[i,], dem=dem_patagonia, max.zones = 5, min.elevZ = 300, elev.thres = NULL)
-    data_area[i,2]<-length(elev_zones_i$area)
+    elev_zones_i   <- elevationZones(x=basins_int[i,], dem=dem, max.zones = 5, min.elevZ = 300)
+    data_area[i,2] <- basins_int[i,]$area
     data_area[i,3:((length(elev_zones_i$area))+2)]<-elev_zones_i$area
-    elev_zones_i<-aggregate(elev_zones_i$zonesRaster,9)
+    elev_zones_i <- as.polygons(elev_zones_i$zonesRaster, na.rm = TRUE, dissolve = TRUE)
+    elev_zones_i <- st_as_sf(elev_zones_i)
     
-    if (class(elev_zones_i) == "RasterLayer"){
-      elev_zones_i<-rasterToPolygons(elev_zones_i, na.rm = TRUE, dissolve = TRUE)
+    # Daily potential evapotranspiration 
+    pet_i <- round(t(exact_extract(pet_gleam, elev_zones_i, "mean", progress = F)), 1)
+    write.csv(pet_i, paste0("MS1 Results/TUWmodel/PMET/PET/PET_gridcode_",   sprintf("%03d", i),".csv"))
+    write.csv(pet_i, paste0("MS1 Results/TUWmodel/CR2MET/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
+    write.csv(pet_i, paste0("MS1 Results/TUWmodel/MSWEP/PET/PET_gridcode_",  sprintf("%03d", i),".csv"))
+    write.csv(pet_i, paste0("MS1 Results/TUWmodel/ERA5/PET/PET_gridcode_",   sprintf("%03d", i),".csv"))
       
-      pet_i<-round(t(raster::extract(pet_gleam, elev_zones_i, fun = mean)),0)
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/PMET/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/CR2MET/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
+    # Daily air temperature
+    t2m_i <- round(t(exact_extract(t2m_era5d, elev_zones_i, "mean", progress = F)), 2)
+    write.csv(t2m_i, paste0("MS1 Results/TUWmodel/ERA5/T2M/T2M_gridcode_",   sprintf("%03d", i),".csv"))
+    t2m_i <- round(t(exact_extract(t2m_pmet, elev_zones_i, "mean", progress = F)),  2)
+    write.csv(t2m_i, paste0("MS1 Results/TUWmodel/PMET/T2M/T2M_gridcode_",   sprintf("%03d", i),".csv"))
+    t2m_i <- round(t(exact_extract(t2m_cr2met, elev_zones_i, "mean", progress = F)),2)
+    write.csv(t2m_i, paste0("MS1 Results/TUWmodel/CR2MET/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
+    write.csv(t2m_i, paste0("MS1 Results/TUWmodel/MSWEP/T2M/T2M_gridcode_",  sprintf("%03d", i),".csv"))
       
-      t2m_i<-round(t(raster::extract(t2m_era5d, elev_zones_i, fun = mean)),3)
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      t2m_i<-round(t(raster::extract(t2m_pmet, elev_zones_i, fun = mean)),3)
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/PMET/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      t2m_i<-round(t(raster::extract(t2m_cr2met, elev_zones_i, fun = mean)),3)
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/CR2MET/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      
-      pp_i<-round(t(raster::extract(pp_pmet, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/PMET/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      pp_i<-round(t(raster::extract(pp_cr2met, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/CR2MET/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      pp_i<-round(t(raster::extract(pp_mswep, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      pp_i<-round(t(raster::extract(pp_era5d, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      
-      print(i)
-      
+    # Daily precipitation
+    pp_i <- round(t(exact_extract(pp_pmet, elev_zones_i, "mean", progress = F)),  1)
+    write.csv(pp_i, paste0("MS1 Results/TUWmodel/PMET/PP/PP_gridcode_",   sprintf("%03d", i),".csv"))
+    pp_i <- round(t(exact_extract(pp_cr2met, elev_zones_i, "mean", progress = F)),1)
+    write.csv(pp_i, paste0("MS1 Results/TUWmodel/CR2MET/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
+    pp_i <- round(t(exact_extract(pp_mswep, elev_zones_i, "mean", progress = F)), 1)
+    write.csv(pp_i, paste0("MS1 Results/TUWmodel/MSWEP/PP/PP_gridcode_",  sprintf("%03d", i),".csv"))
+    pp_i <- round(t(exact_extract(pp_era5d, elev_zones_i, "mean", progress = F)), 1)
+    write.csv(pp_i, paste0("MS1 Results/TUWmodel/ERA5/PP/PP_gridcode_",   sprintf("%03d", i),".csv"))
+    
+    print(i)
+    
     } else {
-      elev_zones_i<-lapply(as.list(elev_zones_i), rasterToPolygons, na.rm = TRUE, dissolve = TRUE)
-      elev_zones_i<-do.call(bind, elev_zones_i) 
-      
-      pet_i<-round(t(raster::extract(pet_gleam, elev_zones_i, fun = mean)),0)
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/PMET/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/CR2MET/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(pet_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
-      
-      t2m_i<-round(t(raster::extract(t2m_era5d, elev_zones_i, fun = mean)),3)
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      t2m_i<-round(t(raster::extract(t2m_pmet, elev_zones_i, fun = mean)),3)
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/PMET/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      t2m_i<-round(t(raster::extract(t2m_cr2met, elev_zones_i, fun = mean)),3)
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/CR2MET/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      write.csv(t2m_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
-      
-      pp_i<-round(t(raster::extract(pp_pmet, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/PMET/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      pp_i<-round(t(raster::extract(pp_cr2met, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/CR2MET/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      pp_i<-round(t(raster::extract(pp_mswep, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/MSWEP/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      pp_i<-round(t(raster::extract(pp_era5d, elev_zones_i, fun = mean)),0)
-      write.csv(pp_i, paste0("C:/Users/rooda/Dropbox/Rstudio/TUWmodel/ERA5/PP/PP_gridcode_", sprintf("%03d", i),".csv"))
-      
-      print(i)
+      print (i)
     }
-    
-  } else {
-    print (i)
-  }
-  
   }
 
-colnames(data_area)<-c("area",	"nbands",	"n1",	"n2",	"n3",	"n4",	"n5")
-write.csv(data_area, "C:/Users/rooda/Dropbox/Rstudio/TUWmodel/data_area.csv")
+write.csv(data_area, "MS1 Results/TUWmodel/data_area.csv")
