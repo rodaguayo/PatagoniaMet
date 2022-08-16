@@ -8,66 +8,39 @@ library("hydroGOF")
 library("terra")
 
 setwd("/home/rooda/Dropbox/Patagonia/Data/Temperature/")
+period     <- c(as.POSIXct("1980-01-01"), as.POSIXct("2020-12-31"))
+attributes <- c("N", "ID", "Institution", "Latitude", "Longitude", "Altitude")
 
-#Observations (location and data)
-t2m_data <- read.csv("Metadata_Temperature_v10.csv")
-t2m_shape <- vect(t2m_data, geom=c("Longitude", "Latitude"), crs="epsg:4326")
+# Observations (location and data)
+t2m_validation  <- read.csv("Metadata_Temperature_v10.csv")
+t2m_shape <- vect(t2m_validation, geom=c("Longitude", "Latitude"), crs="epsg:4326")
 t2m_obs   <- read.csv("Data_Temperature_mean_v10_monthly.csv")
-t2m_obs$Date<-as.Date(t2m_obs$Date) #The date is the first column
+t2m_obs$Date<-as.POSIXct(t2m_obs$Date, tz= "UTC") #The date is the first column
+t2m_validation <- subset(t2m_validation, select = attributes)
 
-#Climate models (reanalysis, satellites, etc)
-t2m_era5    <- rast("T2M_ERA5_1950_2019.nc")
+# Simulations (1980-2020 subset)
+t2m_stacks <- list(ERA5   = rast("T2M_ERA5_1959_2021m.nc"),    # ERA5 
+                  ERA5d  = rast("T2M_ERA5_hr_1980_2020m.nc"),  # ERA5d 
+                  ERA5L  = rast("T2M_ERA5L_1950_2021m.nc"),    # ERA5L
+                  MERRA2 = rast("T2M_MERRA2_1980_2021m.nc"),   # MERRA2 
+                  CSFR   = rast("T2M_CSFR_1979_2019m.nc"),   # CSFR !!
+                  CR2REG = rast("T2M_REGCR2_1980_2015m.nc"),   # CR2REG 
+                  CR2MET = rast("T2M_CR2MET_1979_2020m.nc"),   # CR2MET v2.0 
+                  PMET   = rast("T2M_PMET_1980_2020m.nc"))     # PMET v1.0 
 
+for (i in 1:length(t2m_stacks)) {
+  
+  t2m_stack <- t2m_stacks[[i]]
+  time(t2m_stack) <- as.POSIXct(time(t2m_stack), tz= "UTC") 
+  t2m_stack <- subset(t2m_stack,  which(time(t2m_stack)  >= period[1] & time(t2m_stack)   <= period[2]))
+  t2m_obs_s <- subset(t2m_obs, Date >= min(time(t2m_stack)) &  Date <= max(time(t2m_stack)))
+  t2m_sim   <- as.data.frame(t(extract(t2m_stack, t2m_shape, method='simple'))[-1,])
+  index     <- KGE(sim=t2m_sim, obs=t2m_obs_s[,-1], method="2009", out.type="full",na.rm=TRUE)
+  index     <- index$KGE.elements[3,] # just use rSD
+  index     <- data.frame(ME = me(sim=t2m_sim, obs=t2m_obs_s[,-1], na.rm=TRUE), rSD = index)
+  colnames(index) <- paste0(names(t2m_stacks)[[i]], "_", colnames(index))
+  t2m_validation  <- cbind(t2m_validation, index)
+  print(names(t2m_stacks)[[i]])
+}
 
-t2m_era5_v2 <- rast("T2M_ERA5_1990_2019_v1.nc")
-
-t2m_merra2 < -rast("T2M_MERRA2_1980_2019.nc")
-
-t2m_csfr <- rast("T2M_CSFR_1979_2019.nc")
-
-t2m_cr2reg <- stack("T2M_CR2MET_RegCM4__1980_2015.nc")
-
-t2m_cr2met <- stack("T2M_CR2MET_1979_2019.nc")
-t2m_cr2met <- subset(t2m_cr2met, which(getZ(t2m_cr2met) >= '1990-01-01' & (getZ(t2m_cr2met) <= '2019-12-31')))
-
-t2m_pmet <- stack("T2M_PMET_1990_2019.nc", varname = "tas")
-
-#Extract
-t2m_era5<-t(extract(t2m_era5,t2m_shape, method='simple'))
-t2m_era5_v2<-t(extract(t2m_era5_v2,t2m_shape, method='simple'))
-t2m_merra2<-t(extract(t2m_merra2,t2m_shape, method='simple'))
-t2m_csfr<-t(extract(t2m_csfr,t2m_shape, method='simple'))
-t2m_cr2reg<-t(extract(t2m_cr2reg,t2m_shape, method='simple'))
-t2m_cr2met<-t(extract(t2m_cr2met,t2m_shape, method='simple'))
-t2m_cr2met[is.na(t2m_cr2met)] <- -9999
-t2m_pmet<-t(extract(t2m_pmet,t2m_shape, method='simple'))
-
-#Subset and performance (CR2MET, ERA5v2 and PMET: 1990-2019)
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_era5), format =  "X%Y.%m.%d")))[,-1]
-ME_era5<-cbind(me(sim=t2m_era5, obs=t2m_obs_subset, na.rm=TRUE),rSD(sim=t2m_era5, obs=t2m_obs_subset, na.rm=TRUE))
-
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_era5_v2), format =  "X%Y.%m.%d")))[,-1]
-ME_era5_v2<-cbind(me(sim=t2m_era5_v2, obs=t2m_obs_subset, na.rm=TRUE),rSD(sim=t2m_era5_v2, obs=t2m_obs_subset, na.rm=TRUE),1/rSD(sim=t2m_era5_v2, obs=t2m_obs_subset, na.rm=TRUE))
-
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_merra2), format =  "X%Y.%m.%d")))[,-1]
-ME_merra2<-cbind(me(sim=t2m_merra2, obs=t2m_obs_subset, na.rm=TRUE), rSD(sim=t2m_merra2, obs=t2m_obs_subset, na.rm=TRUE))
-
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_csfr), format =  "X%Y.%m.%d")))[,-1]
-ME_csfr<-cbind(me(sim=t2m_csfr, obs=t2m_obs_subset, na.rm=TRUE), rSD(sim=t2m_csfr, obs=t2m_obs_subset, na.rm=TRUE))
-
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_cr2reg), format =  "X%Y.%m.%d")) & Date <= max(as.Date(rownames(t2m_cr2reg), format =  "X%Y.%m.%d")))[,-1]
-ME_cr2reg<-cbind(me(sim=t2m_cr2reg, obs=t2m_obs_subset, na.rm=TRUE), rSD(sim=t2m_cr2reg, obs=t2m_obs_subset, na.rm=TRUE))
-
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_cr2met), format =  "X%Y.%m.%d")))[,-1]
-ME_cr2met<-cbind(me(sim=t2m_cr2met, obs=t2m_obs_subset, na.rm=TRUE), rSD(sim=t2m_cr2met, obs=t2m_obs_subset, na.rm=TRUE))
-ME_cr2met[c(6,36,55,91),]<-NA
-
-t2m_obs_subset<-subset(t2m_obs, Date >= min(as.Date(rownames(t2m_pmet), format =  "X%Y.%m.%d")))[,-1]
-ME_pmet<-cbind(me(sim=t2m_pmet, obs=t2m_obs_subset, na.rm=TRUE), rSD(sim=t2m_pmet, obs=t2m_obs_subset, na.rm=TRUE))
-
-#Merge and save
-valitation_t2m<-cbind(ME_era5, ME_era5_v2, ME_merra2, ME_csfr, ME_cr2reg, ME_cr2met, ME_pmet)
-colnames(valitation_t2m)<-c("ME_ERA5","rSD_ERA5","ME_ERA5_v2","rSD_ERA5_v2", "rSD_ERA5_v3","ME_MERRA2","rSD_MERRA2",
-                            "ME_CSFR","rSD_CSFR","ME_CR2REG","rSD_CR2REG","ME_CR2MET","rSD_CR2MET", "ME_PMET", "rSD_PMET")
-write.csv(valitation_t2m,"C:/Users/rooda/Dropbox/Rstudio/Validation_T2M.csv")
-
+write.csv(t2m_validation, "Validation_T2M.csv")
