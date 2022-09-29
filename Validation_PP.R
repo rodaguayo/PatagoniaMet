@@ -24,7 +24,7 @@ pp_stacks <- list(ERA5   = rast("PP_ERA5_1959_2021m.nc"),     # ERA5
                   ERA5d  = rast("PP_ERA5_hr_1980_2020m.nc"),  # ERA5d 
                   ERA5L  = rast("PP_ERA5L_1950_2021m.nc"),    # ERA5L
                   MERRA2 = rast("PP_MERRA2_1980_2021m.nc"),   # MERRA2 
-                  CSFR   = rast("PP_CSFR_1979_2019m.nc"),   # CSFR !!
+                  CSFR   = rast("PP_CSFR_1979_2019m.nc"),     # CSFR !!
                   CR2REG = rast("PP_REGCR2_1980_2015m.nc"),   # CR2REG 
                   CR2MET = rast("PP_CR2MET_1979_2020m.nc"),   # CR2MET v2.0 
                   MSWEP  = rast("PP_MSWEPv28_1979_2020m.nc"), # MSWEP v2.8 
@@ -43,4 +43,4 @@ for (i in 1:length(pp_stacks)) {
   print(names(pp_stacks)[[i]])
 }
 
-write.csv(pp_validation, "Validation_PP.csv")
+write.csv(pp_validation, "PP_Validation.csv")
