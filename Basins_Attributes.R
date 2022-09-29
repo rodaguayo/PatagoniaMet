@@ -1,83 +1,119 @@
-# Code for extranting attributes
+# Code for extracting attributes
 # Developed by Rodrigo Aguayo (2020-2022)
 
 rm(list=ls())
 cat("\014")  
 
 setwd("/home/rooda/Dropbox/Patagonia/")
-
+library("exactextractr")
 library("terra")
+library("sf")
 
-#Merge polygons by gridcode
-list <-list.files(path="/GIS South/Shapefiles2", pattern = "shp$", full.names = TRUE)
-ab<-shapefile(lista[1])
+# Data of polygons (and streamflow data) already merged.
+period        <- c(as.POSIXct("1979-12-31"), as.POSIXct("2019/12/31"))
+basin_data    <- read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
+basin_shp     <- st_read("GIS South/Basins_Patagonia83.shp")
+basin_shp_int <- st_read("GIS South/Basins_Patagonia83_int.shp") 
 
-for(i in 1:82){
-b <- shapefile(lista[i+1])
-b <- spTransform(b, crs(ab))
-ab<-rbind(ab,b, makeUniqueIDs = TRUE)
-print(i)
+# Area
+basin_data$total_area_km2  <- round(expanse(vect(basin_shp),     unit="km"), 2)
+basin_data$int_area_km2    <- round(expanse(vect(basin_shp_int), unit="km"), 2)
+
+# Topographic attributes
+dem   <- rast("GIS South/dem_patagonia3f.tif")
+slope <- terrain(dem, v='aspect', unit='degrees') 
+basin_data$mean_elevation   <- round(exact_extract(dem, basin_shp, "mean"), 1)
+basin_data$median_elevation <- round(exact_extract(dem, basin_shp, "median"), 1)
+basin_data$slope            <- round(exact_extract(slope, basin_shp, "median"), 1)
+
+# Land cover
+forest_cover <- rast("GIS South/lc_forest_500m.tif")
+lake_cover   <- rast("GIS South/lc_water_500m.tif")
+basin_data$forest_cover <- round(exact_extract(forest_cover, basin_shp, "mean"), 1)
+basin_data$lake_cover   <- round(exact_extract(lake_cover,   basin_shp, "mean"), 1)
+
+# Glacier area (this might be improve with rasterization)
+glaciers  <- vect("GIS South/Glaciers/RGI6.shp")
+glaciers  <- subset(glaciers, glaciers$CenLat <= -40)
+glaciers  <- rasterize(glaciers, forest_cover, background = 0) * 100
+basin_data$glacier_cover <- round(exact_extract(glaciers,   basin_shp, "mean"), 1)
+
+# Glacier change (elevation in m y-1)
+dh_dt <- vrt(list.files("GIS South/Glaciers/dhdt", full.names = TRUE))
+dh_dt <- project(dh_dt, crs(basin_shp))
+dh_dt <- mask(dh_dt, vect(basin_shp_int), overwrite=TRUE)
+dh_dt <- crop(dh_dt, vect(basin_shp_int))*1000 # from m to mm
+dh_dt <- dh_dt/1.091 # from ice to water
+dh_dt[is.na(dh_dt)] <- 0
+
+basin_data$glacier_dhdt <- round(exact_extract(dh_dt, basin_shp_int, "mean"), 1)
+
+# Streamflow for each basin
+basin_q <- read.csv("Data/Streamflow/Data_Streamflow_v10_annual.csv")
+basin_q <- subset(basin_q, Date >= "1980-01-01")[,-1] # Only years with more than 9 months
+basin_data$Q_m3_s <- round(colMeans(basin_q[sapply(basin_q, is.numeric)], na.rm = TRUE), 2)
+basin_data$Q_m3_s[colSums(basin_q > 0, na.rm = T)/40 <= 0.25] <- NA
+basin_data$Q_m3_s[basin_data$Dam == 1] <- NA # remove data for basins with dams
+
+for (i in 10:35) {
+  basin_data_i <- subset(basin_data, substr(basin_data$Code,1,2) == i)
+  
+  for (j in 1:nrow(basin_data_i)) {
+    code     <- basin_data_i[j,]$Code
+    code_pot <- code*10 + seq(1,9)
+    
+    if (sum(basin_data_i$Code %in% code_pot) >= 1) {
+      q_minus   <- sum(basin_data_i$Q_m3_s[basin_data_i$Code %in% code_pot])
+      basin_data$Qint_m3_s[match(code, basin_data$Code)] <- basin_data_i$Q_m3_s[j] - q_minus
+      
+      } else {
+        basin_data$Qint_m3_s[match(code, basin_data$Code)] <-    basin_data_i$Q_m3_s[j]
+      }
+    }
 }
 
-ab <- spTransform(ab, crs("+init=epsg:32719"))
-ab$area<-1:nrow(ab)
-ab$area <- area(ab) / 1000000
+basin_data$Qint_mm_y <- (basin_data$Qint_m3_s*1e03*365*86400) / (basin_data$int_area_km2*1e6)
+basin_data$Qint_mm_y <- round(basin_data$Qint_mm_y, 1)
 
-ab <- subset(ab, area > 1)
+basin_q  <- read.csv("Data/Streamflow/Data_Streamflow_v10_monthly.csv")
+basin_q  <- subset(basin_q, Date > as.POSIXct("1989-12-31") & Date < as.POSIXct("2005-12-31"))[,-1]
+basin_q  <- colSums(!is.na(basin_q))/nrow(basin_q)
+basin_data$Modeled <- as.numeric(basin_q > 2/3)
+basin_data$Modeled[basin_data$Dam == 1]       <- 0 # Remove basins with dams
+basin_data$Modeled[is.na(basin_data$BF_PMET)] <- 0 # Remove high pp factor values
 
-ab<-ab[order(as.numeric(ab$gridcode)),]
-ab <- spTransform(ab, crs("+init=epsg:4326"))
-shapefile(ab,"Basins_Patagonia83d.shp", overwrite = TRUE)
+# Precipitation datasets
+pp_stacks <- list(PP_ERA5   = rast("Data/Precipitation/PP_ERA5_hr_1980_2020m.nc"),
+                  PP_MSWEP  = rast("Data/Precipitation/PP_MSWEPv28_1979_2020m.nc"),
+                  PP_CR2MET = rast("Data/Precipitation/PP_CR2MET_1979_2020m.nc"),
+                  PP_PMET   = rast("Data/Precipitation/PP_PMET_1980_2020m.nc"))
 
+for (i in 1:length(pp_stacks)) {
+  pp_stack <- pp_stacks[[i]]
+  time(pp_stack) <- as.POSIXct(time(pp_stack), tz= "UTC") 
+  pp_stack <- subset(pp_stack, which(time(pp_stack) > period[1] & time(pp_stack) <= period[2]))
+  pp_stack <- mean(tapp(pp_stack, strftime(time(pp_stack),format="%Y"), fun = sum, na.rm = TRUE))
+  basin_data[names(pp_stacks)[[i]]] <- round(exact_extract(pp_stack, basin_shp_int, "mean"), 0)
+  print(names(pp_stacks)[[i]])
+}
 
+# Potential evapotranspiration datasets
+pet_stack <- rast("Data/Evapotranspiration/PET_GLEAM36a_1980_2021m.nc")
+time(pet_stack) <- as.POSIXct(time(pet_stack), tz= "UTC") 
+pet_stack <- subset(pet_stack, which(time(pet_stack) > period[1] & time(pet_stack) <= period[2]))
+pet_stack <- mean(tapp(pet_stack, strftime(time(pet_stack),format="%Y"), fun = sum, na.rm = TRUE))
+basin_data$PET_PMET <- round(exact_extract(pet_stack, basin_shp_int, "mean"), 0)
 
+# Climate indexes
+pet_stack<-resample(pet_stack, pp_stack)
+basin_data$AI <- round(exact_extract(pp_stack/pet_stack, basin_shp_int, "mean"), 2)
 
-basin_data    <-read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
-basin_shp     <-vect("GIS South/Basins_Patagonia83d.shp")
-basin_shp_int <-shapefile("GIS South/Basins_Patagonia83.shp")
+# Water balance indexes for Chile
+pp_stack  <- rast("Data/Precipitation/PP_WB_DGA_1985_2015.tif")
+pet_stack <- rast("Data/Evapotranspiration/PET_WB_DGA_1985_2015.tif")
+et_stack  <- rast("Data/Evapotranspiration/ET_WB_DGA_1985_2015.tif")
+basin_data$PP_BH  <- round(exact_extract(pp_stack,  basin_shp, "mean"), 0)
+basin_data$PET_BH <- round(exact_extract(pet_stack, basin_shp, "mean"), 0)
+basin_data$ET_BH  <- round(exact_extract(et_stack,  basin_shp, "mean"), 0)
 
-dem    <-rast("GIS South/dem_patagonia3f.tif")
-basin_data$mean_elevation<-extract(dem, basin_shp, fun=mean, na.rm=TRUE)
-
-pp_stack <- rast("Data/Precipitation/PP_ERA5_hr_1990_2019m.nc")
-pp_stack <- pp_era5[[which(getZ(pp_era5) >= as.Date("1989-12-31"))]]
-pp_era5<-mean(stackApply(pp_era5, indices<-format(pp_era5@z$time,"%y"), fun=sum))
-
-pp_merra2<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_MERRA2_1980_2019.nc")
-pp_merra2<-setZ(pp_merra2,seq(as.Date("1980/1/1"), as.Date("2019/12/1"), "month"))
-pp_merra2 <- pp_merra2[[which(getZ(pp_merra2) >= as.Date("1989-12-31"))]]
-pp_merra2<-mean(stackApply(pp_merra2, indices<-format(pp_merra2@z$time,"%y"), fun=sum))
-
-pp_csfr<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_CSFR_1979_2019.nc")
-pp_csfr<-setZ(pp_csfr,seq(as.Date("1979/1/1"), as.Date("2019/12/1"), "month"))
-pp_csfr <- pp_csfr[[which(getZ(pp_csfr) >= as.Date("1989-12-31"))]]
-pp_csfr<-mean(stackApply(pp_csfr, indices<-format(pp_csfr@z$time,"%y"), fun=sum))
-
-pp_mswep<-stack("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_MSWEP_1979_2017.nc")
-pp_mswep<-setZ(pp_mswep,seq(as.Date("1979/1/1"), as.Date('2017-10-31'), "month"))
-pp_mswep <- pp_mswep[[which(getZ(pp_mswep) >= as.Date("1989-12-31"))]]
-pp_mswep<-mean(stackApply(pp_mswep, indices<-format(pp_mswep@z$time,"%y"), fun=sum))
-
-pp_cr2met<-stack("C:/Users/rooda/Downloads/CR2MET/PP_CR2MET_1979_2018.nc")
-pp_cr2met<-setZ(pp_cr2met,seq(as.Date("1979/1/1"), as.Date("2018/12/1"), "month"))
-pp_cr2met <- pp_cr2met[[which(getZ(pp_cr2met) >= as.Date("1989-12-31"))]]
-pp_cr2met<-mean(stackApply(pp_cr2met, indices<-format(pp_cr2met@z$time,"%y"), fun=sum))
-
-pp_patagoniamet<-raster("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/PP_PMET_1990-2019_v1.tif")
-pet_patagoniamet<-raster("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/PET_Pmet_1990_2019_v2_mean.tif")
-pet_gleam<-raster("C:/Users/rooda/Dropbox/Patagonia/Data/Evapotranspiration/PET_GLEAM_1990_2019_mean.tif")
-
-basins_pp<-matrix(0,83,8)
-colnames(basins_pp)<-c("pp_era5","pp_merra2", "pp_csfr","pp_mswep", "pp_cr2metv2.0", "pp_patagonia", "pet_patagonia","pet_gleam")
-rownames(basins_pp)<-basins_int$gridcode
-
-basins_pp[,1]<-extract(pp_era5,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,2]<-extract(pp_merra2,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,3]<-extract(pp_csfr,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,4]<-extract(pp_mswep,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,5]<-extract(pp_cr2met,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,6]<-extract(pp_patagoniamet,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,7]<-extract(pet_patagoniamet,basins_int,fun=mean,na.rm=TRUE)
-basins_pp[,8]<-extract(pet_gleam,basins_int,fun=mean,na.rm=TRUE)
-
-write.csv(basins_pp, "pp_pet_basins83.csv")
+write.csv(basin_data, "Data/Streamflow/Metadata_Streamflow_v10.csv", row.names = FALSE)
