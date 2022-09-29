@@ -20,8 +20,10 @@ lake_monthly<-round(lake_monthly,2)
 write.csv(lake_monthly, "Lake Levels/Data_Lakes_Levels_v10_monthly.csv")
 
 ## Streamflow data: Daily to monthly (> 20 days) and annual (> 10 months) time step 
-streamflow_daily   <- read.csv("Streamflow/Data_Streamflow_v10_daily.csv")
-streamflow_daily_c <- read.csv("Streamflow/Data_Streamflow_v10_daily.csv")
+streamflow_daily           <- read.csv("Streamflow/Data_Streamflow_v10_daily.csv")
+streamflow_daily_c         <- read.csv("Streamflow/Data_Streamflow_v10_daily.csv")
+streamflow_endesa      <- read.csv("Streamflow/Data_Streamflow_Endesa.csv")
+streamflow_endesa$Date <- as.Date(streamflow_endesa$Date)
 
 Date <-seq(from = as.Date(min(streamflow_daily$Date)), to = as.Date(max(streamflow_daily$Date)), by = "month")
 streamflow_daily_c[,2:length(streamflow_daily)][streamflow_daily_c[,2:length(streamflow_daily)]>-99 ]<- 1
@@ -30,6 +32,8 @@ streamflow_monthly   <- data.frame(daily2monthly(streamflow_daily,   FUN = mean,
 streamflow_monthly   <- round(streamflow_monthly, 2)
 streamflow_monthly[streamflow_monthly_c < 20] <- NA
 streamflow_monthly   <- cbind(Date, streamflow_monthly)
+streamflow_monthly[,59] <- ifelse(is.na(streamflow_monthly[,59]),streamflow_endesa[,2], streamflow_monthly[,59])
+streamflow_monthly[,60] <- ifelse(is.na(streamflow_monthly[,60]),streamflow_endesa[,3], streamflow_monthly[,60])
 write.csv(streamflow_monthly, "Streamflow/Data_Streamflow_v10_monthly.csv", row.names = F)
 
 streamflow_monthly_c<-streamflow_monthly
