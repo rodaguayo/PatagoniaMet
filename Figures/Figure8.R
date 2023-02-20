@@ -52,7 +52,7 @@ fig4 <- fig4 %>% layout(annotations = title4)
 fig <- c(0.04, 0.04, 0.01, 0.01)
 fig <- subplot(fig1, fig2,  fig3, fig4, nrows = 2, shareX = T, titleY = T, margin = fig)
 fig
-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
+
 reticulate::use_miniconda('r-reticulate')
 reticulate::py_run_string("import sys") # https://github.com/plotly/plotly.R/issues/2179
 save_image(fig, file = "MS1 Results/Figure8_TUWmodel.png", width = 1200, height = 800, scale = 4)
