@@ -1,38 +1,99 @@
 rm(list=ls())
 cat("\014")  
 
-library("readxl")
 library("plotly")
 library("RColorBrewer")
+setwd("/home/rooda/Dropbox/Patagonia/")
 
-Sys.setenv(PATH=paste0("C:/Users/rooda/AppData/Local/Programs/orca;", Sys.getenv("PATH")))
+vars_pp  <- c("KGE", "r", "Beta", "Gamma")
+data_pp  <- read.csv("Data/Precipitation/PP_Validation.csv")
+data_pp  <- rbind(setNames(data_pp[paste0("ERA5_",   vars_pp)], vars_pp),
+                  setNames(data_pp[paste0("MERRA2_", vars_pp)], vars_pp),
+                  setNames(data_pp[paste0("CSFR_",   vars_pp)], vars_pp),
+                  setNames(data_pp[paste0("CR2REG_", vars_pp)], vars_pp))
+n        <-  nrow(data_pp)/4
+data_pp  <- cbind(data_pp, Model = c(rep("ERA5", n), rep("MERRA2", n), rep("CSFR", n), rep("CR2REG", n)))
+data_pp$Model <- factor(data_pp$Model, levels = c("CSFR", "ERA5", "MERRA2", "CR2REG")) # original order 
 
-data_pp<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Precipitation/Data_Precipitation_v10.xlsx", sheet = "importance")
-data_t2m<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Temperature/Data_Temperature_v10.xlsx", sheet = "importance")
-data_q<-read_xlsx("C:/Users/rooda/Dropbox/Patagonia/Data/Streamflow/Data_Streamflow_v10.xlsx", sheet = "importance")
-
-data<-rbind(data_pp,data_t2m, data_q)
-data$variable <- factor(data$variable, levels = c("Raw PP", "Raw T2M", "Elevation", "Distance to coast", "Climate class"
-                                                   , "Aspect", "Cloud cover", "West gradient"))
-data$index <- factor(data$index, levels = c("\u03b1 PP", "\u03b2 PP", "\u03b1 T2M", "\u03b2 T2M", "BCF"))
+vars_t2m  <- c("ME", "rSD")
+data_t2m <- read.csv("Data/Temperature/Tavg_Validation.csv")
+data_t2m  <- rbind(setNames(data_t2m[paste0("ERA5_",   vars_t2m)], vars_t2m),
+                  setNames(data_t2m[paste0("MERRA2_", vars_t2m)], vars_t2m),
+                  setNames(data_t2m[paste0("CSFR_",   vars_t2m)], vars_t2m),
+                  setNames(data_t2m[paste0("CR2REG_", vars_t2m)], vars_t2m))
+n        <-  nrow(data_t2m)/4
+data_t2m  <- cbind(data_t2m, Model = c(rep("ERA5", n), rep("MERRA2", n), rep("CSFR", n), rep("CR2REG", n)))
+data_t2m$Model <- factor(data_t2m$Model, levels = c("CSFR", "ERA5", "MERRA2", "CR2REG")) # original order 
 
 f <- list(family = "Times New Roman", size = 22)
 f2 <- list(family = "Times New Roman", size = 18)
 
-y <- list(titlefont = f, tickfont = f2, ticks = "outside")
-x <- list(title = "Relative importance (%)", titlefont = f, 
-          tickfont = f2, dtick = 10, ticks = "outside", zeroline = FALSE, range = c(0, 40))
-fig1 <- plot_ly(data, x = ~value, y = ~variable, type = "bar", split = ~index,
-                color = ~index, colors = brewer.pal(5, 'Paired'), 
-                marker = list(line = list(color = "rgba(0,0,0,0.5)", width = 1.5)))
-fig1 <- fig1 %>% layout(xaxis = x, yaxis = y)
+x     <- list(titlefont = f, tickfont = f2, ticks = "outside")
+y     <- list(title = "Correlation (r)", titlefont = f, tickfont = f2, dtick = 0.2, 
+              ticks = "outside", zeroline = FALSE, range = c(0, 1))
+title <- list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.99)
+
+  
+fig1 <- plot_ly(data_pp, y = ~r, x = ~Model, type = "box", color = ~Model, 
+                colors = brewer.pal(4, 'Dark2'), boxmean = T)
+fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
 fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig1 <- fig1 %>% layout(legend = list(x = 0.79, y = 0.99, font = f2, bgcolor = 'rgba(0,0,0,0.1)'))
+fig1 <- fig1 %>% layout(annotations = title)
 
-fig1
+title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.99)
+y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 4),
+          tickfont = f2, dtick = 1, ticks = "outside", zeroline = FALSE)
 
+fig2 <- plot_ly(data_pp, y = ~Beta, x = ~Model, type = "box", color = ~Model, 
+                colors = brewer.pal(4, 'Dark2'), boxmean = T)
+fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
+fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig2 <- fig2 %>% layout(annotations = title2)
 
-server <- orca_serve()
-server$export(fig1, file = "FigureS2_Random_Forest.pdf", width = 700, height = 1000, scale = 4)
-server$export(fig1, file = "FigureS2_Random_Forest.png", width = 700, height = 1000, scale = 4)
-server$close()
+title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.95)
+y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0.3, 1.2),
+           tickfont = f2, dtick = 0.3, ticks = "outside", zeroline = FALSE)
+
+fig3 <- plot_ly(data_pp, y = ~Gamma, x = ~Model, type = "box", color = ~Model, 
+                colors = brewer.pal(4, 'Dark2'), boxmean = T)
+fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
+fig3 <- fig3 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig3 <- fig3 %>% layout(annotations = title3)
+
+title4 <-list(text = "d)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.95)
+y4 <- list(title = "KGE", titlefont = f, 
+          tickfont = f2, dtick = 0.5, ticks = "outside", zeroline = FALSE, range = c(-1, 1))
+
+fig4 <- plot_ly(data_pp, y = ~KGE, x = ~Model, type = "box",  color = ~Model, 
+                colors = brewer.pal(4, 'Dark2'), boxmean = T)
+fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
+fig4 <- fig4 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig4 <- fig4 %>% layout(annotations = title4)
+
+title5 <-list(text = "e)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.91)
+y5 <- list(title = "Mean error (β')", titlefont = f, 
+           tickfont = f2, dtick = 2, ticks = "outside", zeroline = FALSE, range = c(-8, 2))
+
+fig5 <- plot_ly(data_t2m, y = ~ME, x = ~Model, type = "box", color = ~Model, 
+                colors = brewer.pal(4, 'Dark2'), boxmean = T)
+fig5 <- fig5 %>% layout(xaxis = x, yaxis = y5, showlegend = FALSE)
+fig5 <- fig5 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig5 <- fig5 %>% layout(annotations = title5)
+
+title6 <-list(text = "f)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.91)
+y6 <- list(title = "Variability (γ')", titlefont = f, 
+           tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0.6, 1.2))
+
+fig6 <- plot_ly(data_t2m, y = ~rSD, x = ~Model, type = "box", color = ~Model, 
+                colors = brewer.pal(4, 'Dark2'), boxmean = T)
+fig6 <- fig6 %>% layout(xaxis = x, yaxis = y6, showlegend = FALSE)
+fig6 <- fig6 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig6 <- fig6 %>% layout(annotations = title6)
+
+fig <- c(0.04, 0.04, 0.01, 0.01)
+fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY = T, margin = fig)
+fig
+
+reticulate::use_miniconda('r-reticulate')
+reticulate::py_run_string("import sys") # https://github.com/plotly/plotly.R/issues/2179
+save_image(fig, file = "MS1 Results/FigureS2_Validation.png", width = 1200, height = 1000, scale = 4)
