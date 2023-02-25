@@ -10,16 +10,16 @@ setwd("/home/rooda/Dropbox/Patagonia/")
 # Warm up, calibration and validation period
 cal_period  <- c("1990-01-01", "2004-12-31")
 val_period  <- c("2005-01-01", "2019-12-31")
-dates       <- seq(as.Date("1987-01-01"), as.Date("2019-12-31"),   by ="day")
+dates       <- seq(as.Date("1987-01-01"), as.Date("2019-12-31"), by ="day")
 dates_m     <- seq(as.Date("1987-01-01"), as.Date("2019-12-31"), by ="month")
 days        <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
 # General setting
-q_obs <- read.csv("Data/Streamflow/Data_Streamflow_v10_monthly.csv")
+q_obs <- read.csv("Data/Streamflow/Q_PMETobs_v10m.csv")
 q_obs <- subset(q_obs, as.Date(q_obs$Date) >= dates[1] & as.Date(q_obs$Date) <= val_period[2])[,-1]
 areas <- read.csv("MS1 Results/TUWmodel/data_area.csv", row.names=1)
 dirs  <- list.dirs("MS1 Results/TUWmodel", full.names = TRUE, recursive =FALSE)
-dirs  <- c(dirs[2], dirs[3], dirs[1], dirs[4]) # for Figure 9
+dirs  <- c(dirs[2], dirs[5], dirs[3], dirs[1], dirs[4]) # for Figure 9
 
 # Parameters: Lower and upper bound
 lower_param        <-  c(1.0,    0.0,   2.0,  -2.0,  -3.0,     0.0,     0,    0.5,    0,    2,   30,      1,       0,      0,        0)
@@ -48,8 +48,8 @@ TUWhydromod <- function(param.values, PP=pp_i, T2M=t2m_i, PET=pet_i, AREA=area_i
   return(out)
   }
 
-for (model in 1:4) { #number of scenarios
-  for (basin in 1:(length(q_obs))) { #total number of basins
+for (model in 1:5) { #number of scenarios
+  for (basin in 1:(length(q_obs))) { #total number of basins (length(q_obs))
     if (areas$nbands[basin] > 0){ 
       
       q_obs_i <- q_obs[,basin]*1000*86400*days/(areas$area[basin]*10^6)

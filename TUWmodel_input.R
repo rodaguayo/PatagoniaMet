@@ -16,7 +16,7 @@ dem <- rast("GIS South/dem_patagonia3f.tif")
 dem <- aggregate(dem, fact=6, fun="mean")
 dem <- disagg(dem, fact=2, method = "bilinear") # avoid bug in elevation bands
 
-basin_data <- read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
+basin_data <- read.csv("Data/Streamflow/Q_PMETobs_v10_metadata.csv")
 basins_int <- vect("GIS South/Basins_Patagonia83.shp")
 basins_int <- project(basins_int, crs(dem))
 
@@ -34,13 +34,18 @@ pet_gleam <- pet_gleam[[time(pet_gleam)  >= period[1] & time(pet_gleam)  <= peri
 # PP and T2M: CR2MET v2.0; PET: GLEAM v3.6
 pp_cr2met  <- rast("Data/Precipitation/PP_CR2MET_1979_2020d.nc")
 t2m_cr2met <- rast("Data/Temperature/Tavg_CR2MET_1979_2020d.nc")
+terra::time(pp_cr2met) <-   as.POSIXct(time(pp_cr2met))
+terra::time(t2m_cr2met) <-  as.POSIXct(time(t2m_cr2met))
 pp_cr2met  <- pp_cr2met[[time(pp_cr2met)  >= period[1] & time(pp_cr2met)  <= period[2]]]
 t2m_cr2met <- t2m_cr2met[[time(t2m_cr2met)  >= period[1] & time(t2m_cr2met)  <= period[2]]]
 
-# PP: MSWEP v2.8; T2M: CR2MET v2.0; PET: GLEAM v3.6
+# PP and T2M: MSWEP and  MSWX; PET: GLEAM v3.6
 pp_mswep   <- rast("Data/Precipitation/PP_MSWEPv28_1979_2020d.nc")
+t2m_mswx   <- rast("Data/Temperature/Tavg_MSWX_1979_2019d.nc")
 terra::time(pp_mswep) <- as.POSIXct(time(pp_mswep))
+terra::time(t2m_mswx) <- as.POSIXct(time(t2m_mswx))
 pp_mswep  <- pp_mswep[[time(pp_mswep)  >= period[1] & time(pp_mswep)  <= period[2]]]
+t2m_mswx  <- t2m_mswx[[time(t2m_mswx)  >= period[1] & time(t2m_mswx)  <= period[2]]]
 
 # PP and T2M: ERA5d; PET: GLEAM v3.6
 pp_era5d   <- rast("Data/Precipitation/PP_ERA5_hr_1980_2020d.nc")
@@ -49,6 +54,14 @@ terra::time(pp_era5d)  <- as.POSIXct(time(pp_era5d))
 terra::time(t2m_era5d) <- as.POSIXct(time(t2m_era5d))
 pp_era5d   <- pp_era5d[[time(pp_era5d)  >= period[1] & time(pp_era5d)  <= period[2]]]
 t2m_era5d  <- t2m_era5d[[time(t2m_era5d)  >= period[1] & time(t2m_era5d)  <= period[2]]]
+
+# PP and T2M: W5D5 v2.0; PET: GLEAM v3.6
+pp_w5d5   <- rast("Data/Precipitation/PP_W5D5_1979_2019d.nc")
+t2m_w5d5  <- rast("Data/Temperature/Tavg_W5D5_1979_2019d.nc")
+terra::time(pp_w5d5)  <- as.POSIXct(time(pp_w5d5))
+terra::time(t2m_w5d5) <- as.POSIXct(time(t2m_w5d5))
+pp_w5d5   <- pp_w5d5[[time(pp_w5d5)  >= period[1] & time(pp_w5d5)  <= period[2]]]
+t2m_w5d5  <- t2m_w5d5[[time(t2m_w5d5)  >= period[1] & time(t2m_w5d5)  <= period[2]]]
 
 data_area <- data.frame(matrix(0, length(basins_int), 7), row.names = names(basins_int$ID))
 colnames(data_area)<-c("area", "nbands",	"n1",	"n2",	"n3",	"n4",	"n5")
@@ -69,7 +82,8 @@ for (i in 1:length(basins_int)) {
     write.csv(pet_i, paste0("MS1 Results/TUWmodel/CR2MET/PET/PET_gridcode_", sprintf("%03d", i),".csv"))
     write.csv(pet_i, paste0("MS1 Results/TUWmodel/MSWEP/PET/PET_gridcode_",  sprintf("%03d", i),".csv"))
     write.csv(pet_i, paste0("MS1 Results/TUWmodel/ERA5/PET/PET_gridcode_",   sprintf("%03d", i),".csv"))
-      
+    write.csv(pet_i, paste0("MS1 Results/TUWmodel/W5D5/PET/PET_gridcode_",   sprintf("%03d", i),".csv"))
+    
     # Daily air temperature
     t2m_i <- round(t(exact_extract(t2m_era5d, elev_zones_i, "mean", progress = F)), 2)
     write.csv(t2m_i, paste0("MS1 Results/TUWmodel/ERA5/T2M/T2M_gridcode_",   sprintf("%03d", i),".csv"))
@@ -77,8 +91,11 @@ for (i in 1:length(basins_int)) {
     write.csv(t2m_i, paste0("MS1 Results/TUWmodel/PMET/T2M/T2M_gridcode_",   sprintf("%03d", i),".csv"))
     t2m_i <- round(t(exact_extract(t2m_cr2met, elev_zones_i, "mean", progress = F)),2)
     write.csv(t2m_i, paste0("MS1 Results/TUWmodel/CR2MET/T2M/T2M_gridcode_", sprintf("%03d", i),".csv"))
+    t2m_i <- round(t(exact_extract(t2m_mswx, elev_zones_i, "mean", progress = F)),2)
     write.csv(t2m_i, paste0("MS1 Results/TUWmodel/MSWEP/T2M/T2M_gridcode_",  sprintf("%03d", i),".csv"))
-      
+    t2m_i <- round(t(exact_extract(t2m_w5d5, elev_zones_i, "mean", progress = F)),2)
+    write.csv(t2m_i, paste0("MS1 Results/TUWmodel/W5D5/T2M/T2M_gridcode_",  sprintf("%03d", i),".csv"))    
+    
     # Daily precipitation
     pp_i <- round(t(exact_extract(pp_pmet, elev_zones_i, "mean", progress = F)),  1)
     write.csv(pp_i, paste0("MS1 Results/TUWmodel/PMET/PP/PP_gridcode_",   sprintf("%03d", i),".csv"))
@@ -88,6 +105,8 @@ for (i in 1:length(basins_int)) {
     write.csv(pp_i, paste0("MS1 Results/TUWmodel/MSWEP/PP/PP_gridcode_",  sprintf("%03d", i),".csv"))
     pp_i <- round(t(exact_extract(pp_era5d, elev_zones_i, "mean", progress = F)), 1)
     write.csv(pp_i, paste0("MS1 Results/TUWmodel/ERA5/PP/PP_gridcode_",   sprintf("%03d", i),".csv"))
+    pp_i <- round(t(exact_extract(pp_w5d5, elev_zones_i, "mean", progress = F)), 1)
+    write.csv(pp_i, paste0("MS1 Results/TUWmodel/W5D5/PP/PP_gridcode_",   sprintf("%03d", i),".csv"))
     
     print(i)
     
@@ -96,4 +115,4 @@ for (i in 1:length(basins_int)) {
     }
   }
 
-write.csv(data_area, "MS1 Results/TUWmodel/data_area.csv")
+write.csv(data_area, "MS1 Results/TUWmodel/data_area.csv", row.names = FALSE)
