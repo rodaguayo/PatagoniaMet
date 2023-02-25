@@ -11,7 +11,7 @@ library("sf")
 
 # Data of polygons (and streamflow data) already merged.
 period        <- c(as.POSIXct("1979-12-31"), as.POSIXct("2019/12/31"))
-basin_data    <- read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
+basin_data    <- read.csv("Data/Streamflow/Q_PMETobs_v10_metadata.csv")
 basin_shp     <- st_read("GIS South/Basins_Patagonia83.shp")
 basin_shp_int <- st_read("GIS South/Basins_Patagonia83_int.shp") 
 
@@ -86,6 +86,7 @@ basin_data$Modeled[is.na(basin_data$BF_PMET)] <- 0 # Remove high pp factor value
 pp_stacks <- list(PP_ERA5   = rast("Data/Precipitation/PP_ERA5_hr_1980_2020m.nc"),
                   PP_MSWEP  = rast("Data/Precipitation/PP_MSWEPv28_1979_2020m.nc"),
                   PP_CR2MET = rast("Data/Precipitation/PP_CR2MET_1979_2020m.nc"),
+                  PP_W5D5   = rast("Data/Precipitation/PP_W5D5_1979_2019m.nc"),
                   PP_PMET   = rast("Data/Precipitation/PP_PMET_1980_2020m.nc"))
 
 for (i in 1:length(pp_stacks)) {
@@ -116,4 +117,4 @@ basin_data$PP_BH  <- round(exact_extract(pp_stack,  basin_shp, "mean"), 0)
 basin_data$PET_BH <- round(exact_extract(pet_stack, basin_shp, "mean"), 0)
 basin_data$ET_BH  <- round(exact_extract(et_stack,  basin_shp, "mean"), 0)
 
-write.csv(basin_data, "Data/Streamflow/Metadata_Streamflow_v10.csv", row.names = FALSE)
+write.csv(basin_data, "Data/Streamflow/Q_PMETobs_v10_metadata.csv", row.names = FALSE)
