@@ -1,103 +1,102 @@
 rm(list=ls())
 cat("\014")  
 
+library("exactextractr")
 library("plotly")
-library("RColorBrewer")
+library("terra")
+library("sf")
+
 setwd("/home/rooda/Dropbox/Patagonia/")
+basin_shp  <- st_read("GIS South/Basins_Patagonia83_int.shp")
+basin_pp   <- data.frame(matrix(0, ncol = 2, nrow = 0))
+basin_t2m  <- data.frame(matrix(0, ncol = 2, nrow = 0))
+basin_snow <- data.frame(matrix(0, ncol = 2, nrow = 0))
+
+# datasets
+pp_stacks <- list(ERA5d   = rast("Data/Precipitation/PP_ERA5_hr_1980_2020m.nc"),
+                  MSWEP  = rast("Data/Precipitation/PP_MSWEPv28_1979_2020m.nc"),
+                  CR2MET = rast("Data/Precipitation/PP_CR2MET_1979_2020m.nc"),
+                  W5D5   = rast("Data/Precipitation/PP_W5D5_1979_2019m.nc"),
+                  PMET   = rast("Data/Precipitation/PP_PMET_1980_2020m.nc"))
+
+t2m_stacks <- list(ERA5d   = rast("Data/Temperature/Tavg_ERA5_hr_1980_2020m.nc"),
+                   MSWEP  = rast("Data/Temperature/Tavg_MSWX_1979_2021m.nc"),
+                   CR2MET = rast("Data/Temperature/Tavg_CR2MET_1979_2020m.nc"),
+                   W5D5   = rast("Data/Temperature/Tavg_W5D5_1979_2019m.nc"),
+                   PMET   = rast("Data/Temperature/Tavg_PMET_1980_2020m.nc"))
+
+for (i in 1:length(pp_stacks)) {
+  stack <- pp_stacks[[i]]
+  stack <- mean(tapp(stack, strftime(time(stack),format="%Y"), fun = sum, na.rm = TRUE))
+  basin_pp <- rbind(basin_pp, cbind(names(t2m_stacks)[i], exact_extract(stack, basin_shp, "mean")))
+  print(names(pp_stacks)[[i]])
+}
+
+for (i in 1:length(t2m_stacks)) {
+  stack <- t2m_stacks[[i]]
+  stack <- mean(tapp(stack, strftime(time(stack),format="%Y"), fun = mean, na.rm = TRUE))
+  basin_t2m <- rbind(basin_t2m, cbind(names(t2m_stacks)[i], exact_extract(stack, basin_shp, "mean")))
+  print(names(t2m_stacks)[[i]])
+}
+
+for (i in 1:length(pp_stacks)) {
+  stack_pp  <- pp_stacks[[i]]
+  stack_t2m <- t2m_stacks[[i]]
+  save_time <- time(stack_pp)
+  stack_t2m <- resample(stack_t2m, stack_pp, method = "bilinear")
+  stack_pp[stack_t2m > 0] <- 0
+  stack_pp <- mean(tapp(stack_pp, strftime(save_time,format="%Y"), fun = sum, na.rm = TRUE))
+  basin_snow <- rbind(basin_snow, cbind(names(pp_stacks)[i], exact_extract(stack_pp, basin_shp, "mean")))
+  print(names(pp_stacks)[[i]])
+}
+
+stack <- rast("Data/Evapotranspiration/PET_GLEAM36a_1980_2021.tif")
+basin_pet <- as.data.frame(cbind("GLEAM", exact_extract(stack, basin_shp, "mean")))
+basin_pet <- as.numeric(basin_pp$V2) / as.numeric(basin_pet$V2)
+
+basin_pp_true <- read.csv("Data/Streamflow/Q_PMETobs_v10_metadata.csv")$PP_TRUE
+basin_pp_true <- basin_pp_true/as.numeric(basin_pp$V2)
+
 
 models   <- c("ERA5d", "W5D5", "MSWEP", "CR2MET", "PMET")
-vars_pp  <- c("KGE", "r", "Beta", "Gamma")
-vars_t2m <- c("ME", "rSD")
-
-data_pp  <- read.csv("Data/Precipitation/PP_Validation.csv")
-data_pp  <- rbind(setNames(data_pp[paste0("ERA5d_",   vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("MSWEP_", vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("CR2MET_",   vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("W5D5_", vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("PMET_", vars_pp)], vars_pp))
-
-n        <-  nrow(data_pp)/length(models)
-data_pp  <- cbind(data_pp, Model = c(rep("ERA5d", n), rep("MSWEP", n), rep("CR2MET", n), rep("W5D5", n), rep("PMET", n)))
-data_pp$Model  <- factor(data_pp$Model, levels = models)
-
-data_t2m <- read.csv("Data/Temperature/Tavg_Validation.csv")
-data_t2m  <- rbind(setNames(data_t2m[paste0("ERA5d_",   vars_t2m)], vars_t2m),
-                   setNames(data_t2m[paste0("MSWX_",   vars_t2m)], vars_t2m),
-                   setNames(data_t2m[paste0("CR2MET_", vars_t2m)], vars_t2m),
-                   setNames(data_t2m[paste0("W5D5_", vars_t2m)], vars_t2m),
-                   setNames(data_t2m[paste0("PMET_", vars_t2m)], vars_t2m))
-
-n         <-  nrow(data_t2m)/length(models)
-data_t2m  <- cbind(data_t2m, Model = c(rep("ERA5d", n), rep("MSWEP", n), rep("CR2MET", n), rep("W5D5", n), rep("PMET", n)))
-data_t2m$Model <- factor(data_t2m$Model, levels = models)
+basin_pp$V1   <- factor(basin_pp$V1,   levels = models)
+basin_t2m$V1  <- factor(basin_t2m$V1,  levels = models)
+basin_snow$V1 <- factor(basin_snow$V1, levels = models)
 
 f <- list(family = "Times New Roman", size = 22)
 f2 <- list(family = "Times New Roman", size = 18)
+x <- list(titlefont = f, tickfont = f2,  ticks = "outside")
 
-x <- list(titlefont = f, tickfont = f2, ticks = "outside")
-title <-list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.99)
-y <- list(title = "Correlation (r)", titlefont = f, 
-          tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0.2, 1))
-
-fig1 <- plot_ly(data_pp, y = ~r, x = ~Model, type = "box", 
-                color = ~Model, colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
+y1 <- list(title = "Mean precipitation (mm yr-1)", titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, range = c(0, 5000))
+fig1 <- plot_ly(x = basin_pp$V1, y = as.numeric(basin_pp$V2), type = "box", color = basin_pp$V1, colors = brewer.pal(5, 'Dark2'))
+fig1 <- fig1 %>% layout(xaxis = x, yaxis = y1, showlegend = FALSE)
 fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig1 <- fig1 %>% layout(annotations = title)
 
-title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.99)
-y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 4),
-           tickfont = f2, dtick = 1, ticks = "outside", zeroline = FALSE)
-
-fig2 <- plot_ly(data_pp, y = ~Beta, x = ~Model, type = "box", 
-                color = ~Model, colors = brewer.pal(4, 'Dark2'), boxmean = T)
+y2 <- list(title = "Mean temperature (ºC)", titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, range = c(2, 10), dtick = 2)
+fig2 <- plot_ly(x = basin_t2m$V1, y = as.numeric(basin_t2m$V2), type = "box", color = basin_pp$V1, colors = brewer.pal(5, 'Dark2'))
 fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
 fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig2 <- fig2 %>% layout(annotations = title2)
 
-title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.95)
-y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0.2, 1.4),
-           tickfont = f2, dtick = 0.3, ticks = "outside", zeroline = FALSE)
-
-fig3 <- plot_ly(data_pp, y = ~Gamma, x = ~Model, type = "box", 
-                color = ~Model, colors = brewer.pal(4, 'Dark2'), boxmean = T)
+y3 <- list(title = "Aridity index", titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, range = c(0, 8), dtick = 2)
+fig3 <- plot_ly(x = basin_pp$V1, y = basin_pet, type = "box", color = basin_pp$V1, colors = brewer.pal(5, 'Dark2'))
 fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
 fig3 <- fig3 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig3 <- fig3 %>% layout(annotations = title3)
 
-title4 <-list(text = "d)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.95)
-y4 <- list(title = "KGE", titlefont = f, 
-           tickfont = f2, dtick = 1, ticks = "outside", zeroline = FALSE, range = c(-2, 1))
-
-fig4 <- plot_ly(data_pp, y = ~KGE, x = ~Model, type = "box", 
-                color = ~Model, colors = brewer.pal(4, 'Dark2'), boxmean = T)
+y4 <- list(title = "Snow accumulation (mm)", titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, range = c(-50, 1000))
+fig4 <- plot_ly(x = basin_snow$V1, y = as.numeric(basin_snow$V2), type = "box", color = basin_snow$V1, colors = brewer.pal(5, 'Dark2'))
 fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
 fig4 <- fig4 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig4 <- fig4 %>% layout(annotations = title4)
 
-title5 <-list(text = "e)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.91)
-y5 <- list(title = "Mean error (β')", titlefont = f, 
-           tickfont = f2, dtick = 1.5, ticks = "outside", zeroline = FALSE, range = c(-3, 3))
-
-fig5 <- plot_ly(data_t2m, y = ~ME, x = ~Model, type = "box", 
-                color = ~Model, colors = brewer.pal(4, 'Dark2'))
+y5 <- list(title = "BCF", titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, range = c(0, 3))
+fig5 <- plot_ly(x = basin_pp$V1, y = basin_pp_true, type = "box", color = basin_pp$V1, colors = brewer.pal(4, 'Dark2'))
 fig5 <- fig5 %>% layout(xaxis = x, yaxis = y5, showlegend = FALSE)
 fig5 <- fig5 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig5 <- fig5 %>% layout(annotations = title5)
 
-title6 <-list(text = "f)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.91)
-y6 <- list(title = "Variability (γ')", titlefont = f, 
-           tickfont = f2, dtick = 0.15, ticks = "outside", zeroline = FALSE, range = c(0.7, 1.3))
-
-fig6 <- plot_ly(data_t2m, y = ~rSD, x = ~Model, type = "box", 
-                color = ~Model, colors = brewer.pal(4, 'Dark2'))
-fig6 <- fig6 %>% layout(xaxis = x, yaxis = y6, showlegend = FALSE)
-fig6 <- fig6 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig6 <- fig6 %>% layout(annotations = title6)
-
-fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.01, 0.01))
+fig <- c(0.04, 0.04, 0.02, 0.02)
+fig <- subplot(fig1, fig2, fig4, fig3, nrows = 2, shareX = T, shareY = F, titleY = T, margin = fig)
 fig
 
 reticulate::use_miniconda('r-reticulate')
 reticulate::py_run_string("import sys") # https://github.com/plotly/plotly.R/issues/2179
-save_image(fig, file = "MS1 Results/Figure7_Validation.png", width = 1200, height = 1000, scale = 4)
+save_image(fig, file = "MS1 Results/Figure7_comparison.png", width = 1000, height = 800, scale = 4)
+
