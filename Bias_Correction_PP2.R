@@ -21,7 +21,7 @@ pp_stack_hr_m <- tapp(pp_stack_hr, strftime(time(pp_stack_hr), format="%Y"),  fu
 pp_stack_hr_m <- mean(pp_stack_hr_m)
 
 ## 3.1 w factor for Budyko framework --------------------------------------------------------------
-basin_data        <- read.csv("Data/Streamflow/Metadata_Streamflow_v10.csv")
+basin_data        <- read.csv("Data/Streamflow/Q_PMETobs_v10_metadata.csv")
 basin_data$PET_PP <- round(basin_data$PET_BH/basin_data$PP_BH, 2)
 basin_data$ET_PP  <- round(basin_data$ET_BH/basin_data$PP_BH,  2)
 basin_data$w      <- rep(NA, nrow(basin_data))
@@ -69,7 +69,7 @@ basins_shp_int             <- subset(basins_shp_int, !is.na(basin_data$BF_PMET))
 basins_shp_int             <- centroids(vect(basins_shp_int))
 
 basin_data$PP_PMET_int <- NULL
-write.csv(basin_data, "Data/Streamflow/Metadata_Streamflow_v10.csv", row.names = FALSE)
+write.csv(basin_data, "Data/Streamflow/Q_PMETobs_v10_metadata.csv", row.names = FALSE)
 print ("3.3 PP factors: Ok")
 
 ## 3.4 random forest for PP factors ---------------------------------------------------------------
@@ -93,6 +93,7 @@ bias_factor[bias_factor <= 1] <- 1 # (?)
 
 colnames(rf_importance)  <- c("parameter", "var", "month", names(covariates))
 write.csv(rf_importance, "MS1 Results/RF_PP_factor_importance.csv", row.names = FALSE)
+writeRaster(bias_factor, "MS1 Results/Bias_Factor_PP.tif")
 
 pp_pmet   <- pp_stack_hr * bias_factor
 pp_pmet   <- round(pp_pmet, 0)
