@@ -12,9 +12,9 @@ period     <- c(as.POSIXct("1980-01-01"), as.POSIXct("2020-12-31"))
 attributes <- c("N", "ID", "Institution", "Latitude", "Longitude", "Altitude")
 
 # Observations (location and data)
-pp_validation <- read.csv("Metadata_Precipitation_v10.csv")
+pp_validation <- read.csv("PP_PMETobs_v10_metadata.csv")
 pp_shape      <- vect(pp_validation, geom=c("Longitude", "Latitude"), crs="epsg:4326")
-pp_obs        <- read.csv("Data_Precipitation_v10_monthly.csv")
+pp_obs        <- read.csv("PP_PMETobs_v10m.csv")
 pp_obs$Date   <- as.POSIXct(pp_obs$Date, tz= "UTC") # The date is the first column
 pp_obs        <- subset(pp_obs, Date >= period[1] &  Date <= period[2])
 pp_validation <- subset(pp_validation, select = attributes)
@@ -24,10 +24,11 @@ pp_stacks <- list(ERA5   = rast("PP_ERA5_1959_2021m.nc"),     # ERA5
                   ERA5d  = rast("PP_ERA5_hr_1980_2020m.nc"),  # ERA5d 
                   ERA5L  = rast("PP_ERA5L_1950_2021m.nc"),    # ERA5L
                   MERRA2 = rast("PP_MERRA2_1980_2021m.nc"),   # MERRA2 
-                  CSFR   = rast("PP_CSFR_1979_2019m.nc"),     # CSFR !!
+                  CSFR   = rast("PP_CSFR_1979_2019m.nc"),     # CSFR
                   CR2REG = rast("PP_REGCR2_1980_2015m.nc"),   # CR2REG 
                   CR2MET = rast("PP_CR2MET_1979_2020m.nc"),   # CR2MET v2.0 
                   MSWEP  = rast("PP_MSWEPv28_1979_2020m.nc"), # MSWEP v2.8 
+                  W5D5   = rast("PP_W5D5_1979_2019m.nc"),     # W4D5 v2.0
                   PMET   = rast("PP_PMET_1980_2020m.nc"))     # PMET v1.0 
 
 for (i in 1:length(pp_stacks)) {
@@ -43,4 +44,4 @@ for (i in 1:length(pp_stacks)) {
   print(names(pp_stacks)[[i]])
 }
 
-write.csv(pp_validation, "PP_Validation.csv")
+write.csv(pp_validation, "PP_Validation.csv", row.names = FALSE)
