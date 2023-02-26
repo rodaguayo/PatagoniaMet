@@ -90,7 +90,7 @@ for (month in sprintf("%02d", 1:12)) {
   a_linear     <- focal(a_linear, w = focalMat(a_linear, 0.04, "Gauss"), pad = TRUE)
   
   ## 2.3. PQM correction for PMET -----------------------------------------------------------------
-  a_linear[covariates$elevation <= 1] <- NA
+  a_linear[covariates$elevation <= 1] <- NA # check
   b_linear[covariates$elevation <= 1] <- NA
   
   pp_stack_hr_m <- a_linear + pp_stack_hr_m * b_linear # this is too slow and needs a lot of RAM
