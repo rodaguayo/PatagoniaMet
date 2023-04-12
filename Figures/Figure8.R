@@ -5,7 +5,7 @@ library("plotly")
 library("RColorBrewer")
 setwd("/home/rooda/Dropbox/Patagonia/")
 
-models   <- c("ERA5d", "W5D5", "MSWEP", "CR2MET", "PMET")
+models   <- c("ERA5d", "W5E5", "MSWEP", "CR2MET", "PMET")
 vars_pp  <- c("KGE", "r", "Beta", "Gamma")
 vars_t2m <- c("ME", "rSD")
 
@@ -13,22 +13,22 @@ data_pp  <- read.csv("Data/Precipitation/PP_Validation.csv")
 data_pp  <- rbind(setNames(data_pp[paste0("ERA5d_",   vars_pp)], vars_pp),
                   setNames(data_pp[paste0("MSWEP_", vars_pp)], vars_pp),
                   setNames(data_pp[paste0("CR2MET_",   vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("W5D5_", vars_pp)], vars_pp),
+                  setNames(data_pp[paste0("W5E5_", vars_pp)], vars_pp),
                   setNames(data_pp[paste0("PMET_", vars_pp)], vars_pp))
 
 n        <-  nrow(data_pp)/length(models)
-data_pp  <- cbind(data_pp, Model = c(rep("ERA5d", n), rep("MSWEP", n), rep("CR2MET", n), rep("W5D5", n), rep("PMET", n)))
+data_pp  <- cbind(data_pp, Model = c(rep("ERA5d", n), rep("MSWEP", n), rep("CR2MET", n), rep("W5E5", n), rep("PMET", n)))
 data_pp$Model  <- factor(data_pp$Model, levels = models)
 
 data_t2m <- read.csv("Data/Temperature/Tavg_Validation.csv")
 data_t2m  <- rbind(setNames(data_t2m[paste0("ERA5d_",   vars_t2m)], vars_t2m),
                    setNames(data_t2m[paste0("MSWX_",   vars_t2m)], vars_t2m),
                    setNames(data_t2m[paste0("CR2MET_", vars_t2m)], vars_t2m),
-                   setNames(data_t2m[paste0("W5D5_", vars_t2m)], vars_t2m),
+                   setNames(data_t2m[paste0("W5E5_", vars_t2m)], vars_t2m),
                    setNames(data_t2m[paste0("PMET_", vars_t2m)], vars_t2m))
 
 n         <-  nrow(data_t2m)/length(models)
-data_t2m  <- cbind(data_t2m, Model = c(rep("ERA5d", n), rep("MSWEP", n), rep("CR2MET", n), rep("W5D5", n), rep("PMET", n)))
+data_t2m  <- cbind(data_t2m, Model = c(rep("ERA5d", n), rep("MSWEP", n), rep("CR2MET", n), rep("W5E5", n), rep("PMET", n)))
 data_t2m$Model <- factor(data_t2m$Model, levels = models)
 
 f <- list(family = "Times New Roman", size = 22)

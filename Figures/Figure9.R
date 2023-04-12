@@ -5,7 +5,7 @@ library("plotly")
 library("RColorBrewer")
 setwd("/home/rooda/Dropbox/Patagonia/")
 
-models   <- c("ERA5d", "W5D5", "MSWEP", "CR2MET", "PMET")
+models   <- c("ERA5d", "W5E5", "MSWEP", "CR2MET", "PMET")
 data_q  <- read.csv("MS1 Results/Q_performance.csv")
 data_q$Model[data_q$Model== 'ERA5'] <- 'ERA5d'
 data_q$Model  <- factor(data_q$Model, levels = models)

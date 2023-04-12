@@ -7,26 +7,31 @@ library("terra")
 library("sf")
 
 setwd("/home/rooda/Dropbox/Patagonia/")
-basin_shp  <- st_read("GIS South/Basins_Patagonia83_int.shp")
+basin_shp  <- st_read("GIS South/Basins_PMET_v10_int.shp")
 basin_pp   <- data.frame(matrix(0, ncol = 2, nrow = 0))
 basin_t2m  <- data.frame(matrix(0, ncol = 2, nrow = 0))
 basin_snow <- data.frame(matrix(0, ncol = 2, nrow = 0))
 
-# datasets
-pp_stacks <- list(ERA5d   = rast("Data/Precipitation/PP_ERA5_hr_1980_2020m.nc"),
+# list of datasets
+pp_stacks <- list(ERA5d  = rast("Data/Precipitation/PP_ERA5_hr_1980_2020m.nc"),
                   MSWEP  = rast("Data/Precipitation/PP_MSWEPv28_1979_2020m.nc"),
-                  CR2MET = rast("Data/Precipitation/PP_CR2MET_1979_2020m.nc"),
-                  W5D5   = rast("Data/Precipitation/PP_W5D5_1979_2019m.nc"),
+                  CR2MET = rast("Data/Precipitation/PP_CR2MET_1960_2021m.nc"),
+                  W5E5   = rast("Data/Precipitation/PP_W5E5_1979_2019m.nc"),
                   PMET   = rast("Data/Precipitation/PP_PMET_1980_2020m.nc"))
 
-t2m_stacks <- list(ERA5d   = rast("Data/Temperature/Tavg_ERA5_hr_1980_2020m.nc"),
+t2m_stacks <- list(ERA5d  = rast("Data/Temperature/Tavg_ERA5_hr_1980_2020m.nc"),
                    MSWEP  = rast("Data/Temperature/Tavg_MSWX_1979_2021m.nc"),
-                   CR2MET = rast("Data/Temperature/Tavg_CR2MET_1979_2020m.nc"),
-                   W5D5   = rast("Data/Temperature/Tavg_W5D5_1979_2019m.nc"),
+                   CR2MET = rast("Data/Temperature/Tavg_CR2MET_1960_2021m.nc"),
+                   W5E5   = rast("Data/Temperature/Tavg_W5E5_1979_2019m.nc"),
                    PMET   = rast("Data/Temperature/Tavg_PMET_1980_2020m.nc"))
+
+# use a common period
+period     <- c(as.Date("1990-01-01"), as.Date("2019-12-31"))
 
 for (i in 1:length(pp_stacks)) {
   stack <- pp_stacks[[i]]
+  time(stack) <- as.Date(time(stack))
+  stack <- stack[[time(stack) >= period[1] & time(stack) <= period[2]]]
   stack <- mean(tapp(stack, strftime(time(stack),format="%Y"), fun = sum, na.rm = TRUE))
   basin_pp <- rbind(basin_pp, cbind(names(t2m_stacks)[i], exact_extract(stack, basin_shp, "mean")))
   print(names(pp_stacks)[[i]])
@@ -34,6 +39,8 @@ for (i in 1:length(pp_stacks)) {
 
 for (i in 1:length(t2m_stacks)) {
   stack <- t2m_stacks[[i]]
+  time(stack) <- as.Date(time(stack))
+  stack <- stack[[time(stack) >= period[1] & time(stack) <= period[2]]]
   stack <- mean(tapp(stack, strftime(time(stack),format="%Y"), fun = mean, na.rm = TRUE))
   basin_t2m <- rbind(basin_t2m, cbind(names(t2m_stacks)[i], exact_extract(stack, basin_shp, "mean")))
   print(names(t2m_stacks)[[i]])
@@ -50,15 +57,16 @@ for (i in 1:length(pp_stacks)) {
   print(names(pp_stacks)[[i]])
 }
 
-stack <- rast("Data/Evapotranspiration/PET_GLEAM36a_1980_2021.tif")
+stack <- rast("Data/Evapotranspiration/PET_GLEAM36a_1980_2021m.nc")
+stack <- stack[[time(stack) >= period[1] & time(stack) <= period[2]]]
+stack <- mean(tapp(stack, strftime(time(stack),format="%Y"), fun = sum, na.rm = TRUE))
 basin_pet <- as.data.frame(cbind("GLEAM", exact_extract(stack, basin_shp, "mean")))
 basin_pet <- as.numeric(basin_pp$V2) / as.numeric(basin_pet$V2)
 
 basin_pp_true <- read.csv("Data/Streamflow/Q_PMETobs_v10_metadata.csv")$PP_TRUE
 basin_pp_true <- basin_pp_true/as.numeric(basin_pp$V2)
 
-
-models   <- c("ERA5d", "W5D5", "MSWEP", "CR2MET", "PMET")
+models   <- c("ERA5d", "W5E5", "MSWEP", "CR2MET", "PMET")
 basin_pp$V1   <- factor(basin_pp$V1,   levels = models)
 basin_t2m$V1  <- factor(basin_t2m$V1,  levels = models)
 basin_snow$V1 <- factor(basin_snow$V1, levels = models)
