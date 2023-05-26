@@ -19,6 +19,8 @@ q_meta$length <- as.numeric(colSums(!is.na(q_data))) # save length
 n_gauges      <- nrow(q_meta)
 n_values      <- sum(q_meta$length)
 
+
+
 ## 1. Quality check step (the complete time series doesnt makes sense) ---------------------------
 
 # visual check of the complete time series
@@ -43,6 +45,16 @@ q_data$X12291001 <- NULL # Rio Prat En Desembocadura
 q_data$X00002828 <- NULL # Rio_Vizcachas_Cerro_Palique
 q_data$X11536001 <- NULL # Rio_Cochrane_En_Cochrane
 q_data$X11521001 <- NULL # Rio_El_Bagno_En_Chile_Chico
+
+# weird long-term Q in comparison to other stations
+q_data$X10520001 <- NULL # Tagua-tagua
+q_data$X00001870 <- NULL # Raquel_azul
+q_data$X10344004 <- NULL # Rahua chan-chan
+q_data$X10344003 <- NULL # Rahue Rio Negro
+q_data$X00002202 <- NULL # Carrenleufu Helena
+q_data$X11310002 <- NULL # Rio_Oscuro_Cerro_Portezuelo
+q_data$X12284006 <- NULL # Chinas_Cerro_Guido
+q_data$X12286002 <- NULL # Rincon_Ruta290
 q_meta <- subset(q_meta,  q_meta$gauge_id %in% colnames(q_data))
 
 # friendly message and update 
