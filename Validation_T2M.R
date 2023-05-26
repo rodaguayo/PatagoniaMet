@@ -38,7 +38,7 @@ t2m_stacks <- list(ERA5  = rast("Tavg_ERA5_1959_2021m.nc"),     # ERA5
 for (i in 1:length(t2m_stacks)) {
   
   t2m_stack <- t2m_stacks[[i]]
-  time(t2m_stack) <- as.POSIXct(time(t2m_stack), tz= "UTC") 
+  terra::time(t2m_stack) <- as.POSIXct(time(t2m_stack), tz= "UTC") 
   t2m_stack <- subset(t2m_stack,  which(time(t2m_stack)  >= period[1] & time(t2m_stack)   <= period[2]))
   t2m_obs_s <- subset(t2m_obs, Date >= min(time(t2m_stack)) &  Date <= max(time(t2m_stack)))
   t2m_sim   <- as.data.frame(t(extract(t2m_stack, t2m_shape, method='simple'))[-1,])
