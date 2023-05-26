@@ -1,8 +1,6 @@
-# Code for precipitation bias correction
-# Developed by Rodrigo Aguayo (2020-2022)
+# Code for random forest predictors
+# Developed by Rodrigo Aguayo (2020-2023)
 
-# Code for temperature bias correction: Variance and mean scaling ---------------------------------
-# Developed by Rodrigo Aguayo (2020-2022)
 
 rm(list=ls())
 cat("\014")  
@@ -45,18 +43,18 @@ clouds <- rast("GIS South/clouds_raw.tif")*0.01
 clouds <- resample(clouds, sample)
 writeRaster(clouds, "GIS South/clouds_005.tif", overwrite=TRUE)
 
-# Average emperature from max and min 
+# Average temperature from max and min 
 tavg <- (rast("Data/Temperature/Tmin_ERA5_hr_1980_2020.tif") + rast("Data/Temperature/Tmin_ERA5_hr_1980_2020.tif"))/2
+tavg <- resample(tavg, sample)
 writeRaster(tavg, "Data/Temperature/T2M_ERA5_hr_1980_2020.tif", overwrite=TRUE)
 
-# Climate class from Beck et al. (2019)
-climate_class <- rast("GIS South/climate_class_raw.tif")
-climate_class <- resample(climate_class, sample, method = "mode")
-climate_class[climate_class == 30] <- 29 # This produces a small bug
+# Average precipitation 
+pp <- rast("Data/Precipitation/PP_ERA5_hr_1980_2020.tif")
+writeRaster(pp, "Data/Precipitation/PP_ERA5_hr_1980_2020.tif", overwrite=TRUE)
 
-climate_class <- as.factor(climate_class)
-levels(climate_class)<-c("Af",	 "Am",	"As",	 "Aw",	"BSh", "BSk",	"BWh", "BWk",	"Cfa", "Cfb",	
-                         "Cfc",	"Csa", "Csb",	"Csc",	"Cwa", "Cwb",	"Cwc", "Dfa",	"Dfb", "Dfc",
-                         "Dfd", "Dsa", "Dsb", "Dsc",  "Dwa", "Dwb",	"Dwc", "Dwd", "EF", "ET")
+# Aridity index
+pet <- rast("Data/Evapotranspiration/PET_ERA5_hr_1980_2020d.nc")
+pet <- mean(tapp(pet,   strftime(time(pet), format="%Y"), fun = sum, na.rm = TRUE))
+ai  <- pp/pet
+writeRaster(ai, "GIS South/aridity_index_ERA5_hr_005.tif", overwrite=TRUE)
 
-writeRaster(climate_class, "GIS South/climate_class005.tif", overwrite=TRUE)
