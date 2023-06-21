@@ -15,7 +15,15 @@ PatagoniaMet is a collaborative and open dataset that is designed to continuousl
 
 ## Reference
 
-The  manuscript was submitted to Scientific Data. If you use the dataset in your research/work, the recommended citation is: TODO 
+The  manuscript was submitted to Scientific Data. If you use the dataset in your research/work, the recommended citation is: 
+```bib
+@article{aguayo2023,
+  title={PatagoniaMet: A multi-source hydrometeorological dataset for Western Patagonia},
+  author={Aguayo, R., León-Muñoz, J., Aguayo, M., Baez-Villanueva, O., Fernandez, A. Zambrano-Bigiarini, M., and Jacques-Coper, M.},
+  journal={Scientific Data. in review},
+  publisher={Nature Publishing Group UK London}
+}
+```
 
 
 ## Contact
