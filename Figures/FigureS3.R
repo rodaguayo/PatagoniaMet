@@ -13,6 +13,10 @@ f  <- list(family = "Times New Roman", size = 22)
 f2 <- list(family = "Times New Roman", size = 18)
 bg_colour <- "rgb(245, 245, 245)"
 
+hline <- function(y = 0, color = "black") {
+  list(type = "line", x0 = 0, x1 = 1, xref = "paper", opacity = 0.4,
+       y0 = y, y1 = y,line = list(color = color, dash="dot", width = 2.5))}
+
 x <- list(titlefont = f, tickfont = f2, ticks = "outside")
 title <-list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.99)
 y <- list(title = "Correlation (r)", titlefont = f, 
