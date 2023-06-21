@@ -52,7 +52,7 @@ glaciers  <- rasterize(glaciers, forest_cover, background = 0) * 100
 basin_data$glacier_cover <- round(exact_extract(glaciers,   basin_shp, "mean"), 1)
 
 # Glacier change (elevation in m y-1)
-dh_dt <- vrt(list.files("GIS South/Glaciers/dhdt", full.names = TRUE))
+dh_dt <- rast("GIS South/Glaciers/dhdt_2021.tif")
 dh_dt <- project(dh_dt, crs(basin_shp))
 dh_dt <- mask(dh_dt, vect(basin_shp), overwrite=TRUE)
 dh_dt <- crop(dh_dt, vect(basin_shp))*1000 # from m to mm
@@ -115,12 +115,19 @@ for (i in 1:length(pp_stacks)) {
   print(names(pp_stacks)[[i]])
 }
 
-# pet_mean
-pet_stack <- rast("Data/Evapotranspiration/PET_GLEAM36a_1980_2021m.nc")
+# pet_mean from PMET
+pet_stack <- rast("Data/Evapotranspiration/Ep_PMET_1980_2020d.nc")
 terra::time(pet_stack) <- as.POSIXct(time(pet_stack), tz= "UTC") 
 pet_stack <- subset(pet_stack, which(time(pet_stack) > period[1] & time(pet_stack) <= period[2]))
 pet_stack <- mean(tapp(pet_stack, strftime(time(pet_stack),format="%Y"), fun = sum, na.rm = TRUE))
 basin_data$pet_mean_PMET <- round(exact_extract(pet_stack, basin_shp, "mean"), 0)
+
+# pet_mean from GLEAM
+pet_stack <- rast("Data/Evapotranspiration/Ep_GLEAM36a_1980_2021m.nc")
+terra::time(pet_stack) <- as.POSIXct(time(pet_stack), tz= "UTC") 
+pet_stack <- subset(pet_stack, which(time(pet_stack) > period[1] & time(pet_stack) <= period[2]))
+pet_stack <- mean(tapp(pet_stack, strftime(time(pet_stack),format="%Y"), fun = sum, na.rm = TRUE))
+basin_data$pet_mean_GLEAM <- round(exact_extract(pet_stack, basin_shp, "mean"), 0)
 
 # aridity 
 basin_data$aridity_PMET<- round(basin_data$p_mean_PMET/basin_data$pet_mean_PMET, 3)
@@ -175,8 +182,8 @@ basin_data$frac_snow_PMET     <- round(pp_snow/pp_total, 3)
 
 # Water balance indexes for Chile
 pp_stack  <- rast("Data/Precipitation/PP_WB_DGA_1985_2015.tif")
-pet_stack <- rast("Data/Evapotranspiration/PET_WB_DGA_1985_2015.tif")
-et_stack  <- rast("Data/Evapotranspiration/ET_WB_DGA_1985_2015.tif")
+pet_stack <- rast("Data/Evapotranspiration/Ep_WB_DGA_1985_2015.tif")
+et_stack  <- rast("Data/Evapotranspiration/E_WB_DGA_1985_2015.tif")
 basin_data$PP_BH  <- round(exact_extract(pp_stack,  basin_shp, "mean"), 0)
 basin_data$PET_BH <- round(exact_extract(pet_stack, basin_shp, "mean"), 0)
 basin_data$ET_BH  <- round(exact_extract(et_stack,  basin_shp, "mean"), 0)
