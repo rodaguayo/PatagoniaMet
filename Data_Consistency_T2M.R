@@ -1,5 +1,5 @@
-# Code for basin delimitation  -------------------------------------------------------------------
-# Developed by Rodrigo Aguayo (2020-2022)
+# Code for T2M quality control  -------------------------------------------------------------------
+# Developed by Rodrigo Aguayo (2020-2023)
 
 rm(list=ls())
 cat("\014")  

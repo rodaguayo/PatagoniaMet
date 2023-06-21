@@ -1,4 +1,4 @@
-# Code to replicate precipitation validation 
+# Code to replicate precipitation validation ------------------------------------------------------
 # Developed by Rodrigo Aguayo (2020-2023)
 
 rm(list=ls())

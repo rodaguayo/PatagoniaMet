@@ -1,5 +1,5 @@
-# TUWmodel inputs: precipitation, air temperature and potential evapotranspiration
-# Developed by Rodrigo Aguayo (2020-2022)
+# TUWmodel inputs ---------------------------------------------------------------------------------
+# Developed by Rodrigo Aguayo (2020-2023)
 
 rm(list=ls())
 cat("\014")  

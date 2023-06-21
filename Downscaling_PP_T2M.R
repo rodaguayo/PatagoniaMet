@@ -1,5 +1,5 @@
-# Code to downscale reanalysis data
-# Developed by Rodrigo Aguayo (2020-2022)
+# Code to downscale ERA5 data ---------------------------------------------------------------------
+# Developed by Rodrigo Aguayo (2020-2023)
 
 rm(list=ls())
 cat("\014")  

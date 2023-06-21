@@ -1,4 +1,4 @@
-# Code for random forest predictors
+# Code for spatial regression predictors ---------------------------------------------------------
 # Developed by Rodrigo Aguayo (2020-2023)
 
 
