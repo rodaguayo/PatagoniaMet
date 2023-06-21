@@ -48,9 +48,13 @@ basin_data$PP_TRUE <- rep(NA, nrow(basin_data))
 
 for (basin in 1:nrow(basin_data)) {
   if (!is.na(basin_data$Qint_mm_y[basin])){ 
-    basin_data$PP_TRUE[basin] <- uniroot(pp_function, interval=c(50, 10000), tol = 0.000001, 
+    
+    basin_data$PP_TRUE[basin] <- uniroot(pp_function, tol = 0.001, 
+                                         interval=c( # problem with Qs less than 100
+                                           ifelse(basin_data$Qint_mm_y[basin] < 100, 50, 100), 
+                                           basin_data$Qint_mm_y[basin]+1000), 
                                          Q   = basin_data$Qint_mm_y[basin], 
-                                         PET = basin_data$pet_mean_PMET[basin], 
+                                         PET = basin_data$pet_mean_GLEAM[basin], 
                                          dW  = basin_data$glacier_dhdt[basin],
                                          w   = median(basin_data$w, na.rm = T))$root
     basin_data$PP_TRUE[basin] <- round(basin_data$PP_TRUE[basin], 0)
@@ -63,7 +67,7 @@ print ("3.2 long-term precipitation: Ok")
 basins_shp_int             <- sf::st_read("GIS South/Basins_PMET_v10_int.shp")
 basin_data$PP_PMET_int     <- exact_extract(pp_stack_hr_m, basins_shp_int, "mean")
 basin_data$BF_PMET         <- round(basin_data$PP_TRUE/basin_data$PP_PMET_int, 3)
-basin_data$BF_PMET[basin_data$BF_PMET > 2] <- NA # remove outliers
+basin_data$BF_PMET[basin_data$BF_PMET > 2.5] <- NA # remove outliers
 basins_shp_int$BF_PMET     <- basin_data$BF_PMET
 basins_shp_int             <- subset(basins_shp_int, !is.na(basin_data$BF_PMET))
 basins_shp_int             <- centroids(vect(basins_shp_int))
@@ -106,12 +110,12 @@ rf_performance  <- c(parameter = "pp_factor", var = "pp", month = "00",
                      rPearson_mean = mean(rf_model$resample$Rsquared**0.5), 
                      rPearson_sd = sd(rf_model$resample$Rsquared**0.5))
 
-write.csv(rf_importance, "MS1 Results/RF_PP_factor_importance.csv", row.names = FALSE)
+write.csv(t(as.data.frame(rf_importance)), "MS1 Results/RF_PP_factor_importance.csv", row.names = FALSE)
 write.csv(rf_performance, "MS1 Results/RF_PP_factor_performance.csv", row.names = FALSE)
 
 bias_factor   <- terra::predict(covariates[[predictors(rf_model)]], rf_model$fit, type='response', na.rm = T)
 #bias_factor  <- focal(bias_factor, w = focalMat(pp_stack_hr_m, 0.04, "Gauss"), pad = TRUE)
-bias_factor[bias_factor <= 1] <- 1 # (?)
+bias_factor[bias_factor <= 1] <- 1
 writeRaster(bias_factor, "MS1 Results/Bias_Factor_PP.tif", overwrite = TRUE)
 
 pp_pmet   <- pp_stack_hr * bias_factor
