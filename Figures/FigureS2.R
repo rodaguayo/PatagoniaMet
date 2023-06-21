@@ -3,97 +3,83 @@ cat("\014")
 
 library("plotly")
 library("RColorBrewer")
+library("reshape2")
+
 setwd("/home/rooda/Dropbox/Patagonia/")
+#setwd("C:/Users/rooda/Dropbox/Patagonia/")
 
-vars_pp  <- c("KGE", "r", "Beta", "Gamma")
-data_pp  <- read.csv("Data/Precipitation/PP_Validation.csv")
-data_pp  <- rbind(setNames(data_pp[paste0("ERA5_",   vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("MERRA2_", vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("CSFR_",   vars_pp)], vars_pp),
-                  setNames(data_pp[paste0("CR2REG_", vars_pp)], vars_pp))
-n        <-  nrow(data_pp)/4
-data_pp  <- cbind(data_pp, Model = c(rep("ERA5", n), rep("MERRA2", n), rep("CSFR", n), rep("CR2REG", n)))
-data_pp$Model <- factor(data_pp$Model, levels = c("CSFR", "ERA5", "MERRA2", "CR2REG")) # original order 
+# list of all predictors
+vars     <- c("distance_coast", "elevation", "t2m", "pp", "cloud_cover",
+              "west_gradient", "aspect", "aridity_index")
+vars_name <- c("Distance to coast", "Elevation", "Temperature", "Precipitation", 
+               "Cloud cover", "West gradient", "Aspect",  "Aridity index")
 
-vars_t2m  <- c("ME", "rSD")
-data_t2m <- read.csv("Data/Temperature/Tavg_Validation.csv")
-data_t2m  <- rbind(setNames(data_t2m[paste0("ERA5_",   vars_t2m)], vars_t2m),
-                  setNames(data_t2m[paste0("MERRA2_", vars_t2m)], vars_t2m),
-                  setNames(data_t2m[paste0("CSFR_",   vars_t2m)], vars_t2m),
-                  setNames(data_t2m[paste0("CR2REG_", vars_t2m)], vars_t2m))
-n        <-  nrow(data_t2m)/4
-data_t2m  <- cbind(data_t2m, Model = c(rep("ERA5", n), rep("MERRA2", n), rep("CSFR", n), rep("CR2REG", n)))
-data_t2m$Model <- factor(data_t2m$Model, levels = c("CSFR", "ERA5", "MERRA2", "CR2REG")) # original order 
+data_pp  <- read.csv("MS1 Results/RF_PP_importance.csv")
+data_pp  <- melt(data_pp, id.vars = "parameter", measure.vars = vars, na.rm = FALSE)
+levels(data_pp$variable) <-  vars_name
+data_pp$parameter[data_pp$parameter=="a_linear"] <- "PP α"
+data_pp$parameter[data_pp$parameter=="b_linear"] <- "PP β"
+data_pp_alpha <- subset(data_pp, parameter == "PP α")
+data_pp_beta  <- subset(data_pp, parameter == "PP β")
 
-f <- list(family = "Times New Roman", size = 22)
-f2 <- list(family = "Times New Roman", size = 18)
+data_q   <- read.csv("MS1 Results/RF_PP_factor_importance.csv")
+data_q  <- melt(data_q, id.vars = "parameter", measure.vars = vars, na.rm = FALSE)
+levels(data_q$variable) <-  vars_name
+
+data_t2m  <- read.csv("MS1 Results/RF_T2M_importance.csv")
+data_t2m  <- melt(data_t2m, id.vars = c("parameter", "var"), measure.vars = vars, na.rm = TRUE)
+levels(data_t2m$variable) <-  vars_name
+data_t2m$parameter[data_t2m$parameter=="me"] <-  "T2M β"
+data_t2m$parameter[data_t2m$parameter=="rSD"] <- "T2M α" 
+data_tmax_alpha <- subset(data_t2m, var == "Tmax" & parameter == "T2M α")
+data_tmax_beta  <- subset(data_t2m, var == "Tmax" & parameter == "T2M β")
+data_tmin_alpha <- subset(data_t2m, var == "Tmin" & parameter == "T2M α")
+data_tmin_beta  <- subset(data_t2m, var == "Tmin" & parameter == "T2M β")
+
+
+f <- list(family = "Times New Roman", size = 20)
+f2 <- list(family = "Times New Roman", size = 16)
 
 x     <- list(titlefont = f, tickfont = f2, ticks = "outside")
-y     <- list(title = "Correlation (r)", titlefont = f, tickfont = f2, dtick = 0.2, 
-              ticks = "outside", zeroline = FALSE, range = c(0, 1))
-title <- list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.99)
+y     <- list(title = "Importance (%)", standoff=0, titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, dtick = 25, range = c(-10,110))
+title <- list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.04, y = 0.99)
 
-  
-fig1 <- plot_ly(data_pp, y = ~r, x = ~Model, type = "box", color = ~Model, 
-                colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
+fig1 <- plot_ly(type = 'box', y = data_pp_alpha$value, x = data_pp_alpha$variable, 
+                offsetgroup = "A", showlegend = TRUE,  color = I("#a6bddb"), name = "PP α")
+fig1 <- fig1 %>% add_boxplot(y = data_pp_beta$value, x = data_pp_beta$variable, offsetgroup = "B", color = I("#3690c0"), name = "PP β")
+fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = TRUE)
 fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig1 <- fig1 %>% layout(annotations = title)
+fig1 <- fig1 %>% add_trace(x = data_q$variable, y = data_q$value, color = data_q$parameter, name = "PP BCF",
+                           type = 'scatter',  mode = 'markers', 
+                           marker = list(size = 13, color = "#034e7b"))
 
-title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.99)
-y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 4),
-          tickfont = f2, dtick = 1, ticks = "outside", zeroline = FALSE)
+title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.04, y = 0.96)
+y2 <- list(title = "Importance (%)", standoff=0, titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, dtick = 5, range = c(-1,20))
 
-fig2 <- plot_ly(data_pp, y = ~Beta, x = ~Model, type = "box", color = ~Model, 
-                colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
+fig2 <- plot_ly(y = data_tmax_alpha$value, x = data_tmax_alpha$variable, type = "box", 
+                offsetgroup = "A",  color = I("#a1d99b"),  name = "Tmax α")
+fig2 <- fig2 %>% add_boxplot(y = data_tmax_beta$value, x = data_tmax_beta$variable, offsetgroup = "B", color = I("#238b45"),  name = "Tmax β")
+fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2)
 fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig2 <- fig2 %>% layout(annotations = title2)
 
-title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.95)
-y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0.3, 1.2),
-           tickfont = f2, dtick = 0.3, ticks = "outside", zeroline = FALSE)
 
-fig3 <- plot_ly(data_pp, y = ~Gamma, x = ~Model, type = "box", color = ~Model, 
-                colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
+title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.04, y = 0.91)
+y3 <- list(title = "Importance (%)", standoff=0, titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, dtick = 10, range = c(-1,30))
+
+fig3 <- plot_ly(y = data_tmin_alpha$value, x = data_tmin_alpha$variable, type = "box", 
+                offsetgroup = "A", color = I("#fdae6b"),  name = "Tmin α")
+fig3 <- fig3 %>% add_boxplot(y = data_tmin_beta$value, x = data_tmin_beta$variable, offsetgroup = "B", color = I("#f16913"),  name = "Tmin β")
+fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3)
 fig3 <- fig3 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
 fig3 <- fig3 %>% layout(annotations = title3)
 
-title4 <-list(text = "d)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.95)
-y4 <- list(title = "KGE", titlefont = f, 
-          tickfont = f2, dtick = 0.5, ticks = "outside", zeroline = FALSE, range = c(-1, 1))
 
-fig4 <- plot_ly(data_pp, y = ~KGE, x = ~Model, type = "box",  color = ~Model, 
-                colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
-fig4 <- fig4 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig4 <- fig4 %>% layout(annotations = title4)
-
-title5 <-list(text = "e)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.91)
-y5 <- list(title = "Mean error (β')", titlefont = f, 
-           tickfont = f2, dtick = 2, ticks = "outside", zeroline = FALSE, range = c(-8, 2))
-
-fig5 <- plot_ly(data_t2m, y = ~ME, x = ~Model, type = "box", color = ~Model, 
-                colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig5 <- fig5 %>% layout(xaxis = x, yaxis = y5, showlegend = FALSE)
-fig5 <- fig5 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig5 <- fig5 %>% layout(annotations = title5)
-
-title6 <-list(text = "f)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.91)
-y6 <- list(title = "Variability (γ')", titlefont = f, 
-           tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0.6, 1.2))
-
-fig6 <- plot_ly(data_t2m, y = ~rSD, x = ~Model, type = "box", color = ~Model, 
-                colors = brewer.pal(4, 'Dark2'), boxmean = T)
-fig6 <- fig6 %>% layout(xaxis = x, yaxis = y6, showlegend = FALSE)
-fig6 <- fig6 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
-fig6 <- fig6 %>% layout(annotations = title6)
-
-fig <- c(0.04, 0.04, 0.01, 0.01)
-fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY = T, margin = fig)
+fig <- subplot(fig1, fig2, fig3, nrows = 3, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.01, 0.01))
+fig <- fig %>% layout(boxmode = "group", boxgroupgap = 0.07, legend = list(orientation = 'h', x = 0.05, y = 1.04, font = f2))
 fig
 
 reticulate::use_miniconda('r-reticulate')
 reticulate::py_run_string("import sys") # https://github.com/plotly/plotly.R/issues/2179
-save_image(fig, file = "MS1 Results/FigureS2_Validation.png", width = 1200, height = 1000, scale = 4)
+save_image(fig, file = "MS1 Results/FigureS2_Random_Forest.png", width = 800, height = 1000, scale = 4)
