@@ -27,6 +27,7 @@ fig1 <- plot_ly(data_pet, y = ~GLEAM_r, x = ~Zone, type = "box",
 fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
 fig1 <- fig1 %>% layout(plot_bgcolor=bg_colour)
 fig1 <- fig1 %>% layout(annotations = title)
+fig1 <- fig1 %>% layout(shapes = list(hline(1)))
 
 title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.99)
 y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 2),
@@ -37,6 +38,7 @@ fig2 <- plot_ly(data_pet, y = ~GLEAM_Beta, x = ~Zone, type = "box",
 fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
 fig2 <- fig2 %>% layout(plot_bgcolor=bg_colour)
 fig2 <- fig2 %>% layout(annotations = title2)
+fig2 <- fig2 %>% layout(shapes = list(hline(1)))
 
 title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.95)
 y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0, 2),
@@ -47,6 +49,7 @@ fig3 <- plot_ly(data_pet, y = ~GLEAM_Alpha, x = ~Zone, type = "box",
 fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
 fig3 <- fig3 %>% layout(plot_bgcolor=bg_colour)
 fig3 <- fig3 %>% layout(annotations = title3)
+fig3 <- fig3 %>% layout(shapes = list(hline(1)))
 
 title4 <-list(text = "d)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.95)
 y4 <- list(title = "KGE", titlefont = f, 
@@ -57,7 +60,7 @@ fig4 <- plot_ly(data_pet, y = ~GLEAM_KGE, x = ~Zone, type = "box",
 fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
 fig4 <- fig4 %>% layout(plot_bgcolor=bg_colour)
 fig4 <- fig4 %>% layout(annotations = title4)
-fig4
+fig4 <- fig4 %>% layout(shapes = list(hline(1)))
 
 fig <- subplot(fig1, fig2, fig3, fig4, nrows = 2, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.015, 0.015))
 fig
