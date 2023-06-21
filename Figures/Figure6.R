@@ -18,6 +18,7 @@ data_q_val$Model  <- factor(data_q_val$Model, levels = models)
 
 f <- list(family = "Times New Roman", size = 22)
 f2 <- list(family = "Times New Roman", size = 18)
+bg_colour <- "rgb(245, 245, 245)"
 
 hline <- function(y = 0, color = "black") {
   list(type = "line", x0 = 0, x1 = 1, xref = "paper", opacity = 0.4,
@@ -31,7 +32,7 @@ y <- list(title = "Correlation (r)", titlefont = f,
 fig1 <- plot_ly(data_q_cal, y = ~r, x = ~Model, type = "box", color = ~Model, colors = brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
 fig1 <- fig1 %>% add_boxplot(y = data_q_val$r, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
-fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig1 <- fig1 %>% layout(plot_bgcolor=bg_colour)
 fig1 <- fig1 %>% layout(annotations = title1, boxmode = "group", boxgroupgap = 0.15)
 fig1 <- fig1 %>% layout(shapes = list(hline(1)))
 
@@ -42,7 +43,7 @@ y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 2),
 fig2 <- plot_ly(data_q_cal, y = ~Beta, x = ~Model, type = "box", color = ~Model, colors = brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
 fig2 <- fig2 %>% add_boxplot(y = data_q_val$Beta, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
-fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig2 <- fig2 %>% layout(plot_bgcolor=bg_colour)
 fig2 <- fig2 %>% layout(annotations = title2, boxmode = "group", boxgroupgap = 0.15)
 fig2 <- fig2 %>% layout(shapes = list(hline(1)))
 
@@ -53,7 +54,7 @@ y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0.6, 1.4),
 fig3 <- plot_ly(data_q_cal, y = ~Gamma, x = ~Model, type = "box", color = ~Model, colors =  brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
 fig3 <- fig3 %>% add_boxplot(y = data_q_val$Gamma, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
-fig3 <- fig3 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig3 <- fig3 %>% layout(plot_bgcolor=bg_colour)
 fig3 <- fig3 %>% layout(annotations = title3, boxmode = "group", boxgroupgap = 0.15)
 fig3 <- fig3 %>% layout(shapes = list(hline(1)))
 
@@ -64,7 +65,7 @@ y4 <- list(title = "KGE", titlefont = f,
 fig4 <- plot_ly(data_q_cal, y = ~KGE, x = ~Model, type = "box", color = ~Model, colors =  brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
 fig4 <- fig4 %>% add_boxplot(y = data_q_val$KGE, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
-fig4 <- fig4 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig4 <- fig4 %>% layout(plot_bgcolor=bg_colour)
 fig4 <- fig4 %>% layout(annotations = title4, boxmode = "group", boxgroupgap = 0.15)
 fig4 <- fig4 %>% layout(shapes = list(hline(1)))
 

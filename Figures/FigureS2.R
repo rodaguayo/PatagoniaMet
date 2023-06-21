@@ -39,6 +39,7 @@ data_tmin_beta  <- subset(data_t2m, var == "Tmin" & parameter == "T2M β")
 
 f <- list(family = "Times New Roman", size = 20)
 f2 <- list(family = "Times New Roman", size = 16)
+bg_colour <- "rgb(245, 245, 245)"
 
 x     <- list(titlefont = f, tickfont = f2, ticks = "outside")
 y     <- list(title = "Importance (%)", standoff=0, titlefont = f, tickfont = f2, ticks = "outside", zeroline = FALSE, dtick = 25, range = c(-10,110))
@@ -48,7 +49,7 @@ fig1 <- plot_ly(type = 'box', y = data_pp_alpha$value, x = data_pp_alpha$variabl
                 offsetgroup = "A", showlegend = TRUE,  color = I("#a6bddb"), name = "PP α")
 fig1 <- fig1 %>% add_boxplot(y = data_pp_beta$value, x = data_pp_beta$variable, offsetgroup = "B", color = I("#3690c0"), name = "PP β")
 fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = TRUE)
-fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig1 <- fig1 %>% layout(plot_bgcolor=bg_colour)
 fig1 <- fig1 %>% layout(annotations = title)
 fig1 <- fig1 %>% add_trace(x = data_q$variable, y = data_q$value, color = data_q$parameter, name = "PP BCF",
                            type = 'scatter',  mode = 'markers', 
@@ -61,7 +62,7 @@ fig2 <- plot_ly(y = data_tmax_alpha$value, x = data_tmax_alpha$variable, type = 
                 offsetgroup = "A",  color = I("#a1d99b"),  name = "Tmax α")
 fig2 <- fig2 %>% add_boxplot(y = data_tmax_beta$value, x = data_tmax_beta$variable, offsetgroup = "B", color = I("#238b45"),  name = "Tmax β")
 fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2)
-fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig2 <- fig2 %>% layout(plot_bgcolor=bg_colour)
 fig2 <- fig2 %>% layout(annotations = title2)
 
 
@@ -72,7 +73,7 @@ fig3 <- plot_ly(y = data_tmin_alpha$value, x = data_tmin_alpha$variable, type = 
                 offsetgroup = "A", color = I("#fdae6b"),  name = "Tmin α")
 fig3 <- fig3 %>% add_boxplot(y = data_tmin_beta$value, x = data_tmin_beta$variable, offsetgroup = "B", color = I("#f16913"),  name = "Tmin β")
 fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3)
-fig3 <- fig3 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig3 <- fig3 %>% layout(plot_bgcolor=bg_colour)
 fig3 <- fig3 %>% layout(annotations = title3)
 
 

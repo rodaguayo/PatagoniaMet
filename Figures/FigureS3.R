@@ -11,6 +11,7 @@ data_pet$Zone <- factor(data_pet$Zone, levels = c("Northern", "Center", "Souther
 
 f  <- list(family = "Times New Roman", size = 22)
 f2 <- list(family = "Times New Roman", size = 18)
+bg_colour <- "rgb(245, 245, 245)"
 
 x <- list(titlefont = f, tickfont = f2, ticks = "outside")
 title <-list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.99)
@@ -20,7 +21,7 @@ y <- list(title = "Correlation (r)", titlefont = f,
 fig1 <- plot_ly(data_pet, y = ~GLEAM_r, x = ~Zone, type = "box", 
                 color = ~Zone, colors = brewer.pal(3, 'Dark2'), boxmean = TRUE)
 fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
-fig1 <- fig1 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig1 <- fig1 %>% layout(plot_bgcolor=bg_colour)
 fig1 <- fig1 %>% layout(annotations = title)
 
 title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.99)
@@ -30,7 +31,7 @@ y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 2),
 fig2 <- plot_ly(data_pet, y = ~GLEAM_Beta, x = ~Zone, type = "box", 
                 color = ~Zone, colors = brewer.pal(3, 'Dark2'), boxmean = TRUE)
 fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
-fig2 <- fig2 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig2 <- fig2 %>% layout(plot_bgcolor=bg_colour)
 fig2 <- fig2 %>% layout(annotations = title2)
 
 title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.95)
@@ -40,7 +41,7 @@ y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0, 2),
 fig3 <- plot_ly(data_pet, y = ~GLEAM_Alpha, x = ~Zone, type = "box", 
                 color = ~Zone, colors = brewer.pal(3, 'Dark2'), boxmean = TRUE)
 fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
-fig3 <- fig3 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig3 <- fig3 %>% layout(plot_bgcolor=bg_colour)
 fig3 <- fig3 %>% layout(annotations = title3)
 
 title4 <-list(text = "d)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.03, y = 0.95)
@@ -50,7 +51,7 @@ y4 <- list(title = "KGE", titlefont = f,
 fig4 <- plot_ly(data_pet, y = ~GLEAM_KGE, x = ~Zone, type = "box", 
                 color = ~Zone, colors = brewer.pal(3, 'Dark2'), boxmean = TRUE)
 fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
-fig4 <- fig4 %>% layout(plot_bgcolor="rgb(235, 235, 235)")
+fig4 <- fig4 %>% layout(plot_bgcolor=bg_colour)
 fig4 <- fig4 %>% layout(annotations = title4)
 fig4
 
