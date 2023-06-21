@@ -1,5 +1,5 @@
-# Code for precipitation bias correction ---------------------------------------------------------
-# Developed by Rodrigo Aguayo (2020-2022)
+# Code for precipitation bias correction: Part Nº2 ------------------------------------------------
+# Developed by Rodrigo Aguayo (2020-2023)
 
 rm(list=ls())
 cat("\014")  
