@@ -20,7 +20,7 @@ The  manuscript was submitted to Scientific Data. If you use the dataset in your
 @article{aguayo2023,
   title={PatagoniaMet: A multi-source hydrometeorological dataset for Western Patagonia},
   author={Aguayo, R., León-Muñoz, J., Aguayo, M., Baez-Villanueva, O., Fernandez, A. Zambrano-Bigiarini, M., and Jacques-Coper, M.},
-  journal={Scientific Data. in review},
+  journal={Scientific Data. submitted},
   publisher={Nature Publishing Group UK London}
 }
 ```
