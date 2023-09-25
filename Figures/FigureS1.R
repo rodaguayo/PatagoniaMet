@@ -81,7 +81,7 @@ fig4 <- fig4 %>% layout(shapes = list(hline(1)))
 
 title5 <-list(text = "e)", font = f, showarrow = F, xref = "paper", yref = "paper", x = 0.01, y = 0.91)
 y5 <- list(title = "Mean error (β')", titlefont = f, 
-           tickfont = f2, dtick = 2, ticks = "outside", zeroline = FALSE, range = c(-8, 2))
+           tickfont = f2, dtick = 2, ticks = "outside", zeroline = FALSE, range = c(-4, 2))
 
 fig5 <- plot_ly(data_t2m, y = ~ME, x = ~Model, type = "box", color = ~Model, 
                 colors = brewer.pal(4, 'Dark2'), boxmean = T)

@@ -56,7 +56,7 @@ dh_dt <- rast("GIS South/Glaciers/dhdt_2021.tif")
 dh_dt <- project(dh_dt, crs(basin_shp))
 dh_dt <- mask(dh_dt, vect(basin_shp), overwrite=TRUE)
 dh_dt <- crop(dh_dt, vect(basin_shp))*1000 # from m to mm
-dh_dt <- dh_dt/1.091 # from ice to water
+dh_dt <- dh_dt / 1.091 # from ice to water
 dh_dt[is.na(dh_dt)] <- 0
 
 basin_data$glacier_dhdt <- round(exact_extract(dh_dt, basin_shp, "mean"), 1)
@@ -104,7 +104,7 @@ pp_stacks <- list(p_mean_ERA5   = rast("Data/Precipitation/PP_ERA5_hr_1980_2020m
                   p_mean_MSWEP  = rast("Data/Precipitation/PP_MSWEPv28_1979_2020m.nc"),
                   p_mean_CR2MET = rast("Data/Precipitation/PP_CR2MET_1960_2021m.nc"),
                   p_mean_W5E5   = rast("Data/Precipitation/PP_W5E5_1979_2019m.nc"),
-                  p_mean_PMET   = rast("Data/Precipitation/PP_PMET_1980_2020m.nc"))
+                  p_mean_PMET   = rast("Data/Precipitation/PP_PMETsim_1980_2020_v10m.nc"))
 
 for (i in 1:length(pp_stacks)) {
   pp_stack <- pp_stacks[[i]]
@@ -133,14 +133,13 @@ basin_data$pet_mean_GLEAM <- round(exact_extract(pet_stack, basin_shp, "mean"), 
 basin_data$aridity_PMET<- round(basin_data$p_mean_PMET/basin_data$pet_mean_PMET, 3)
 
 # several precipitation metrics
-pp_stack <- rast("Data/Precipitation/PP_PMET_1980_2020d.nc")
+pp_stack <- rast("Data/Precipitation/PP_PMETsim_1980_2020_v10d.nc")
 time_pp <- time(pp_stack)
 pp_stack <- t(exact_extract(pp_stack, basin_shp, "mean"))
 row.names(pp_stack) <- as.character(time_pp)
 colnames(pp_stack)  <- basin_shp$Name
 pp_stack <- zoo(pp_stack,  order.by = time_pp)
 
-# several precipitation metrics
 t2m_stack <- rast("Data/Temperature/Tavg_PMET_1980_2020d.nc")
 time_t2m  <- time(t2m_stack)
 t2m_stack <- t(exact_extract(t2m_stack, basin_shp, "mean"))
@@ -148,7 +147,7 @@ row.names(t2m_stack) <- as.character(time_t2m)
 colnames(t2m_stack)  <- basin_shp$Name
 t2m_stack <- zoo(t2m_stack,  order.by = time_t2m)
 
-for (i in 1:ncol(pp_stack)) {
+for (i in 1:(ncol(pp_stack)-1)) {
   metric_i <- eventseq(pp_stack[,i], thresh = 5*mean(pp_stack[,i]))
   metric_i <- eventinfo(pp_stack[,i], metric_i)
   
