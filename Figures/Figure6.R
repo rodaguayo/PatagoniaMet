@@ -7,13 +7,18 @@ library("RColorBrewer")
 setwd("/home/rooda/Dropbox/Patagonia/")
 #setwd("C:/Users/rooda/Dropbox/Patagonia/")
 
-models   <- c("ERA5d", "W5E5", "MSWEP", "CR2MET", "PMET")
+models   <- c("ERA5d", "W5E5", "MSWEP", "CR2MET", "PMET", "PMET(CV)")
 data_q  <- read.csv("MS1 Results/Q_performance.csv")
 data_q$Model[data_q$Model== 'ERA5'] <- 'ERA5d'
+
+data_q_cv  <- read.csv("MS1 Results/Q_performance_CV.csv")
+data_q_cv$Model<- 'PMET(CV)'
+
+data_q <- rbind(data_q, data_q_cv)
+
 data_q$Model  <- factor(data_q$Model, levels = models)
 data_q_cal <- subset(data_q, Stage == "Calibration")
 data_q_val <- subset(data_q, Stage == "Validation")
-
 data_q_val$Model  <- factor(data_q_val$Model, levels = models)
 
 f <- list(family = "Times New Roman", size = 22)
@@ -29,7 +34,7 @@ title1 <-list(text = "a)", font = f, showarrow = F, xref = "paper", yref = "pape
 y <- list(title = "Correlation (r)", titlefont = f, 
           tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE, range = c(0.2, 1))
 
-fig1 <- plot_ly(data_q_cal, y = ~r, x = ~Model, type = "box", color = ~Model, colors = brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
+fig1 <- plot_ly(data_q_cal, y = ~r, x = ~Model, type = "box", color = ~Model, colors = c(brewer.pal(5, 'Dark2'),"#66A61E"), boxmean = T, offsetgroup = "A")
 fig1 <- fig1 %>% add_boxplot(y = data_q_val$r, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig1 <- fig1 %>% layout(xaxis = x, yaxis = y, showlegend = FALSE)
 fig1 <- fig1 %>% layout(plot_bgcolor=bg_colour)
@@ -40,7 +45,7 @@ title2 <-list(text = "b)", font = f, showarrow = F, xref = "paper", yref = "pape
 y2 <- list(title = "Bias (β)", titlefont = f, range = c(0, 2),
            tickfont = f2, dtick = 0.5, ticks = "outside", zeroline = FALSE)
 
-fig2 <- plot_ly(data_q_cal, y = ~Beta, x = ~Model, type = "box", color = ~Model, colors = brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
+fig2 <- plot_ly(data_q_cal, y = ~Beta, x = ~Model, type = "box", color = ~Model, colors = c(brewer.pal(5, 'Dark2'),"#66A61E"), boxmean = T, offsetgroup = "A")
 fig2 <- fig2 %>% add_boxplot(y = data_q_val$Beta, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig2 <- fig2 %>% layout(xaxis = x, yaxis = y2, showlegend = FALSE)
 fig2 <- fig2 %>% layout(plot_bgcolor=bg_colour)
@@ -51,7 +56,7 @@ title3 <-list(text = "c)", font = f, showarrow = F, xref = "paper", yref = "pape
 y3 <- list(title = "Variability (γ)", titlefont = f, range = c(0.6, 1.4),
            tickfont = f2, dtick = 0.2, ticks = "outside", zeroline = FALSE)
 
-fig3 <- plot_ly(data_q_cal, y = ~Gamma, x = ~Model, type = "box", color = ~Model, colors =  brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
+fig3 <- plot_ly(data_q_cal, y = ~Gamma, x = ~Model, type = "box", color = ~Model, colors =  c(brewer.pal(5, 'Dark2'),"#66A61E"), boxmean = T, offsetgroup = "A")
 fig3 <- fig3 %>% add_boxplot(y = data_q_val$Gamma, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig3 <- fig3 %>% layout(xaxis = x, yaxis = y3, showlegend = FALSE)
 fig3 <- fig3 %>% layout(plot_bgcolor=bg_colour)
@@ -62,14 +67,14 @@ title4 <-list(text = "d)", font = f, showarrow = F, xref = "paper", yref = "pape
 y4 <- list(title = "KGE", titlefont = f, 
            tickfont = f2, dtick = 0.25, ticks = "outside", zeroline = FALSE, range = c(0.1, 1))
 
-fig4 <- plot_ly(data_q_cal, y = ~KGE, x = ~Model, type = "box", color = ~Model, colors =  brewer.pal(5, 'Dark2'), boxmean = T, offsetgroup = "A")
+fig4 <- plot_ly(data_q_cal, y = ~KGE, x = ~Model, type = "box", color = ~Model, colors =  c(brewer.pal(5, 'Dark2'),"#66A61E"), boxmean = T, offsetgroup = "A")
 fig4 <- fig4 %>% add_boxplot(y = data_q_val$KGE, x = data_q_val$Model, type = "box", color = data_q_val$Model, boxmean = T, offsetgroup = "B", opacity = 0.6)
 fig4 <- fig4 %>% layout(xaxis = x, yaxis = y4, showlegend = FALSE)
 fig4 <- fig4 %>% layout(plot_bgcolor=bg_colour)
 fig4 <- fig4 %>% layout(annotations = title4, boxmode = "group", boxgroupgap = 0.15)
 fig4 <- fig4 %>% layout(shapes = list(hline(1)))
 
-fig <- c(0.04, 0.04, 0.01, 0.01)
+fig <- c(0.04, 0.04, 0.02, 0.02)
 fig <- subplot(fig1, fig2,  fig3, fig4, nrows = 2, shareX = T, titleY = T, margin = fig)
 fig
 
