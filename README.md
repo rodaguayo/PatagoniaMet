@@ -4,7 +4,7 @@
 
 [![DOI](https://zenodo.org/badge/360892253.svg)](https://zenodo.org/badge/latestdoi/360892253)
 
-Western Patagonia (40-56ºS), one of the largest and best-preserved freshwater ecosystems in the world, is a clear example of how the systematic lack of data (or publicly accessible), and poor-quality control protocols, have hindered further hydrometeorological studies. To address these limitations, we present PatagoniaMet (PMET), a compilation of ground-based hydrometeorological data (PMET-obs; 1950-2020), and a daily gridded product of precipitation and maximum and minimum temperature (PMET-sim; 0.05º, 1980-2020). The complete dataset of PatagoniaMet can be found at <https://zenodo.org/record/7992761>
+Western Patagonia (40-56ºS), one of the largest and best-preserved freshwater ecosystems in the world, is a clear example of how the systematic lack of data (or publicly accessible), and poor-quality control protocols, have hindered further hydrometeorological studies. To address these limitations, we present PatagoniaMet (PMET), a compilation of ground-based hydrometeorological data (PMET-obs; 1950-2020), and a daily gridded product of precipitation and maximum and minimum temperature (PMET-sim; 0.05º, 1980-2020). The latest version of PatagoniaMet can be found at <https://doi.org/10.5281/zenodo.7992760>
 
 ## About this repository
 
