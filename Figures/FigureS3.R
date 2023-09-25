@@ -9,8 +9,8 @@ setwd("/home/rooda/Dropbox/Patagonia/")
 data_pet <- read.csv("Data/Evapotranspiration/Ep_Validation.csv")
 data_pet$Zone <- factor(data_pet$Zone, levels = c("Northern", "Center", "Southern"))
 
-f  <- list(family = "Times New Roman", size = 22)
-f2 <- list(family = "Times New Roman", size = 18)
+f  <- list(family = "Times New Roman", size = 24)
+f2 <- list(family = "Times New Roman", size = 20)
 bg_colour <- "rgb(245, 245, 245)"
 
 hline <- function(y = 0, color = "black") {
@@ -62,9 +62,9 @@ fig4 <- fig4 %>% layout(plot_bgcolor=bg_colour)
 fig4 <- fig4 %>% layout(annotations = title4)
 fig4 <- fig4 %>% layout(shapes = list(hline(1)))
 
-fig <- subplot(fig1, fig2, fig3, fig4, nrows = 2, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.015, 0.015))
+fig <- subplot(fig1, fig2, fig3, fig4, nrows = 2, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.02, 0.02))
 fig
 
 reticulate::use_miniconda('r-reticulate')
 reticulate::py_run_string("import sys") # https://github.com/plotly/plotly.R/issues/2179
-save_image(fig, file = "MS1 Results/FigureS3_Validation_Ep.png", width = 1200, height = 700, scale = 4)
+save_image(fig, file = "MS1 Results/FigureS3_Validation_Ep.png", width = 1100, height = 800, scale = 4)

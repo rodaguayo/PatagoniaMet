@@ -25,8 +25,8 @@ n        <-  nrow(data_t2m)/4
 data_t2m  <- cbind(data_t2m, Model = c(rep("ERA5", n), rep("MERRA2", n), rep("CSFR", n), rep("CR2REG", n)))
 data_t2m$Model <- factor(data_t2m$Model, levels = c("CSFR", "ERA5", "MERRA2", "CR2REG")) # original order 
 
-f <- list(family = "Times New Roman", size = 22)
-f2 <- list(family = "Times New Roman", size = 18)
+f <- list(family = "Times New Roman", size = 24)
+f2 <- list(family = "Times New Roman", size = 20)
 bg_colour <- "rgb(245, 245, 245)"
 
 hline <- function(y = 0, color = "black") {
@@ -101,7 +101,7 @@ fig6 <- fig6 %>% layout(plot_bgcolor=bg_colour)
 fig6 <- fig6 %>% layout(annotations = title6)
 fig6 <- fig6 %>% layout(shapes = list(hline(1)))
 
-fig <- c(0.04, 0.04, 0.01, 0.01)
+fig <- c(0.04, 0.04, 0.02, 0.02)
 fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY = T, margin = fig)
 fig
 

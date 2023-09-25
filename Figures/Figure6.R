@@ -21,8 +21,8 @@ data_q_cal <- subset(data_q, Stage == "Calibration")
 data_q_val <- subset(data_q, Stage == "Validation")
 data_q_val$Model  <- factor(data_q_val$Model, levels = models)
 
-f <- list(family = "Times New Roman", size = 22)
-f2 <- list(family = "Times New Roman", size = 18)
+f <- list(family = "Times New Roman", size = 24)
+f2 <- list(family = "Times New Roman", size = 20)
 bg_colour <- "rgb(245, 245, 245)"
 
 hline <- function(y = 0, color = "black") {

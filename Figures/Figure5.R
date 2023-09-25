@@ -43,8 +43,8 @@ data_t2m_cv <- read.csv("Data/Temperature/Tavg_Validation_CV.csv")
 data_t2m_cv <- data.frame(ME = data_t2m_cv$me_cv, rSD = as.numeric(data_t2m_cv$me_rSD), Model = "PMET(CV)")
 data_t2m    <- rbind(data_t2m, data_t2m_cv)
 
-f <- list(family = "Times New Roman", size = 22)
-f2 <- list(family = "Times New Roman", size = 18)
+f <- list(family = "Times New Roman", size = 24)
+f2 <- list(family = "Times New Roman", size = 20)
 bg_colour <- "rgb(245, 245, 245)"
 
 hline <- function(y = 0, color = "black") {
@@ -118,7 +118,7 @@ fig6 <- fig6 %>% layout(plot_bgcolor= bg_colour)
 fig6 <- fig6 %>% layout(annotations = title6)
 fig6 <- fig6 %>% layout(shapes = list(hline(1)))
 
-fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.01, 0.01))
+fig <- subplot(fig1, fig2, fig3, fig4, fig5, fig6, nrows = 3, shareX = T, titleY = T, margin = c(0.04, 0.04, 0.02, 0.02))
 fig
 
 reticulate::use_miniconda('r-reticulate')
