@@ -5,4 +5,6 @@
 *.csv
 .ipynb_checkpoints/
 data/
+dataset/
 reports/
+results/
