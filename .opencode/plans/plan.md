@@ -143,12 +143,12 @@ PatagoniaMet/
 - [ ] `editorconfig`: Create `.editorconfig` for consistent formatting
 
 ### Phase 1 — Core utilities
-- [ ] `core-resample`: Port `src/TimeResample.R` → `patagoniaMet/core/resample.py`
+- [x] `core-resample`: Port `src/TimeResample.R` → `patagoniaMet/core/resample.py`
   - `monthly_resample(daily_data, days_min, func)` using pandas GroupBy
   - `annual_resample(monthly_data, months_min, func)`
 - [ ] `core-changepoint`: Create `patagoniaMet/core/changepoint.py` (ruptures wrapper)
 - [ ] `core-types`: Create `patagoniaMet/core/types.py` (shared type aliases)
-- [ ] `test-resample`: Add unit tests for resample functions
+- [x] `test-resample`: Add unit tests for resample functions (12 tests)
 
 ### Phase 2 — Spatial processing (needed by Bias Correction)
 - [ ] `proc-basins`: Port `Basins_Attributes.R` → `patagoniaMet/processors/spatial/basins.py`
