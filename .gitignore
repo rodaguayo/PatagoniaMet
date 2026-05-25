@@ -40,6 +40,9 @@ ENV/
 # opencode
 .opencode/
 
+# R source files (ported to Python)
+src/
+
 # IDE
 .vscode/
 .idea/
