@@ -1,0 +1,47 @@
+
+default:
+
+  general: 
+    version: "v11"
+    cv: FALSE
+
+  dir:
+    data: "/home/rooda/OneDrive/PatagoniaMet/Data"
+    gis: "/home/rooda/OneDrive/PatagoniaMet/GIS"
+    results: "/home/rooda/OneDrive/PatagoniaMet/Results"
+    zenodo: "/home/rooda/OneDrive/PatagoniaMet/Zenodo"
+    raw: "/home/rooda/Datasets"
+
+  region:
+    lon_max: -68.25
+    lon_min: -75.75
+    lat_max: -40.5
+    lat_min: -55.75
+    res: 0.05
+    
+  bias_correction:
+    ntree: 500
+    
+  downscaling:
+    lapse_rate: 0.0065
+  
+  quality_check:
+    n_years: 20
+    n_days: 20
+    q:
+      outlier_negative: true
+      outlier_ge: 9999
+      outlier_zero: true
+      rolling_365_window: 365
+      rolling_365_max_na: 0.8
+      rolling_30_window: 30
+      rolling_30_max_cv: 0.01
+    
+  time:
+    full_start: "1960-01-01"
+    full_end: "2023-12-31"
+    ref_start: "1980-01-01"
+    ref_end: "2020-12-31"
+    
+    
+    
