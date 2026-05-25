@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "patagoniaMet"
+version = "0.1.0"
+description = "A multi-source hydrometeorological dataset for Western Patagonia"
+authors = ["Rodrigo Aguayo <roodaguayo@gmail.com>"]
+readme = "README.md"
+packages = [{include = "patagoniaMet"}]
+
+[tool.poetry.dependencies]
+python = "^3.14"
+xarray = "*"
+rioxarray = "*"
+geopandas = "*"
+pandas = "*"
+numpy = "*"
+scikit-learn = "*"
+pyyaml = "*"
+pydantic = "^2.0"
+pydantic-settings = "^2.0"
+matplotlib = "*"
+joblib = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+ruff = "*"
+mypy = "*"
+pre-commit = "*"
+ipykernel = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,23 @@
+name: patagoniaMet
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python >=3.14
+  - xarray
+  - rioxarray
+  - geopandas
+  - pandas
+  - numpy
+  - scikit-learn
+  - pyyaml
+  - pydantic >=2.0
+  - pydantic-settings >=2.0
+  - matplotlib
+  - joblib
+  - pytest
+  - ruff
+  - mypy
+  - pre-commit
+  - ipykernel
+  - pip
