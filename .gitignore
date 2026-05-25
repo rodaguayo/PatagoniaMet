@@ -37,6 +37,9 @@ ENV/
 # Jupyter
 .ipynb_checkpoints/
 
+# opencode
+.opencode/
+
 # IDE
 .vscode/
 .idea/
