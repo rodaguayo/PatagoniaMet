@@ -8,7 +8,19 @@ Western Patagonia (40-56ºS), one of the largest and best-preserved freshwater e
 
 ## About this repository
 
-This repository contains all the code used to process the raw data and generate the figures in the corresponding manuscript. This repository also acts as a website to publicly discuss changes and add new data to this region.
+This repository contains all the code used to process the raw data and generate the figures in the corresponding manuscript. This repository also acts as a website to publicly discuss chan  ges and add new data to this region.
+
+## Getting started
+
+This project uses [Pixi](https://pixi.sh) for environment management.
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+git clone https://github.com/rooda/PatagoniaMet.git
+cd PatagoniaMet
+pixi install
+pixi shell
+```
 
 ## How to contribute
 
@@ -19,11 +31,10 @@ PatagoniaMet is a collaborative and open dataset that is designed to continuousl
 The manuscript was submitted to Scientific Data. If you use the dataset in your research/work, the recommended citation is:
 
 ``` bib
-@article{aguayo2023,
+@article{aguayo2024,
   title={PatagoniaMet: A multi-source hydrometeorological dataset for Western Patagonia},
   author={Aguayo, R., León-Muñoz, J., Aguayo, M., Baez-Villanueva, O., Fernandez, A. Zambrano-Bigiarini, M., and Jacques-Coper, M.},
-  journal={Scientific Data. in review},
-  publisher={Nature Publishing Group UK London}
+  journal={Scientific Data. 2024},
 }
 ```
 

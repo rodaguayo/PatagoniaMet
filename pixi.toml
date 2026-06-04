@@ -1,0 +1,42 @@
+[workspace]
+name = "patagoniaMet"
+version = "0.1.0"
+description = "A multi-source hydrometeorological dataset for Western Patagonia"
+authors = ["Rodrigo Aguayo <roodaguayo@gmail.com>"]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tasks]
+test = "pytest"
+lint = "ruff check ."
+format = "ruff format ."
+typecheck = "mypy ."
+precommit = "pre-commit run --all-files"
+
+[dependencies]
+python = ">=3.13"
+xarray = "*"
+rioxarray = "*"
+geopandas = "*"
+pandas = "*"
+numpy = "*"
+scikit-learn = "*"
+pyyaml = "*"
+pydantic = ">=2.0"
+pydantic-settings = ">=2.0"
+matplotlib = "*"
+joblib = "*"
+ipykernel = "*"
+
+[feature.dev.dependencies]
+pytest = "*"
+ruff = "*"
+mypy = "*"
+pre-commit = "*"
+
+[pypi-dependencies]
+patagoniamet = { path = ".", editable = true }
+
+[environments]
+dev = ["dev"]
+
