@@ -34,6 +34,9 @@ wheels/
 venv/
 ENV/
 
+# pixi
+.pixi/
+
 # Jupyter
 .ipynb_checkpoints/
 
@@ -54,6 +57,10 @@ data/
 dataset/
 reports/
 results/
+
+# Figure outputs, but keep the R scripts that generate them
+figures/*
+!figures/*.R
 
 # OS
 .DS_Store
